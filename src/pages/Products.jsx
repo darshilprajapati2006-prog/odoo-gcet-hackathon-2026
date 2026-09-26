@@ -1,63 +1,58 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ProductFilters from "../features/products/ProductFilters";
 import ProductTable from "../features/products/ProductTable";
 import ProductModal from "../features/products/ProductModal";
-
-const initialProducts = [
-  {
-    id: 1,
-    name: "Steel Rod",
-    sku: "STL-001",
-    category: "Raw Material",
-    unit: "kg",
-    stock: 100,
-    reorderLevel: 20,
-    isActive: true,
-  },
-  {
-    id: 2,
-    name: "Office Chair",
-    sku: "CHR-001",
-    category: "Furniture",
-    unit: "pcs",
-    stock: 8,
-    reorderLevel: 10,
-    isActive: true,
-  },
-  {
-    id: 3,
-    name: "Copper Wire",
-    sku: "COP-001",
-    category: "Raw Material",
-    unit: "meter",
-    stock: 0,
-    reorderLevel: 15,
-    isActive: true,
-  },
-  {
-    id: 4,
-    name: "Laptop",
-    sku: "LAP-001",
-    category: "Electronics",
-    unit: "pcs",
-    stock: 25,
-    reorderLevel: 5,
-    isActive: true,
-  },
-];
+import {
+  getProducts,
+  createProduct,
+  updateProduct,
+  deactivateProduct,
+} from "../services/products";
 
 function Products() {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [stockStatus, setStockStatus] = useState("All");
   const [productStatus, setProductStatus] = useState("Active");
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  const categories = useMemo(() => {
-    return ["All", ...new Set(products.map((product) => product.category))];
-  }, [products]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getProducts();
+
+      const formattedProducts = data.map((product) => ({
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        category: product.category_id || "Uncategorized",
+        category_id: product.category_id,
+        unit: product.unit_of_measure,
+        stock: Number(product.initial_stock || 0),
+        reorderLevel: Number(product.reorder_level || 0),
+        isActive: product.is_active,
+      }));
+
+      setProducts(formattedProducts);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to load products.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProducts();
+  }, []);
 
   const getStockStatus = (product) => {
     if (product.stock <= 0) {
@@ -71,9 +66,21 @@ function Products() {
     return "In Stock";
   };
 
+  const categories = useMemo(() => {
+    const uniqueCategories = [
+      ...new Set(
+        products
+          .map((product) => product.category)
+          .filter(Boolean)
+      ),
+    ];
+
+    return ["All", ...uniqueCategories];
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      const searchText = search.toLowerCase();
+      const searchText = search.toLowerCase().trim();
 
       const matchesSearch =
         product.name.toLowerCase().includes(searchText) ||
@@ -82,10 +89,11 @@ function Products() {
       const matchesCategory =
         category === "All" || product.category === category;
 
-      const status = getStockStatus(product);
+      const currentStockStatus = getStockStatus(product);
 
       const matchesStockStatus =
-        stockStatus === "All" || status === stockStatus;
+        stockStatus === "All" ||
+        currentStockStatus === stockStatus;
 
       const matchesProductStatus =
         productStatus === "All" ||
@@ -99,7 +107,13 @@ function Products() {
         matchesProductStatus
       );
     });
-  }, [products, search, category, stockStatus, productStatus]);
+  }, [
+    products,
+    search,
+    category,
+    stockStatus,
+    productStatus,
+  ]);
 
   const openCreateModal = () => {
     setEditingProduct(null);
@@ -116,32 +130,46 @@ function Products() {
     setEditingProduct(null);
   };
 
-  const handleSaveProduct = (productData) => {
-    if (editingProduct) {
-      setProducts((currentProducts) =>
-        currentProducts.map((product) =>
-          product.id === editingProduct.id
-            ? {
-                ...product,
-                ...productData,
-              }
-            : product
-        )
-      );
-    } else {
-      const newProduct = {
-        id: Date.now(),
-        ...productData,
-        isActive: true,
-      };
+  const handleSaveProduct = async (productData) => {
+    try {
+      setError("");
 
-      setProducts((currentProducts) => [...currentProducts, newProduct]);
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, {
+          name: productData.name,
+          sku: productData.sku,
+          category_id: productData.category_id,
+          unit_of_measure: productData.unit,
+          reorder_level: productData.reorderLevel,
+        });
+      } else {
+        await createProduct({
+          name: productData.name,
+          sku: productData.sku,
+          category_id: productData.category_id,
+          unit_of_measure: productData.unit,
+          initial_stock: productData.stock,
+          reorder_level: productData.reorderLevel,
+        });
+      }
+
+      await loadProducts();
+      closeModal();
+    } catch (err) {
+      console.error(err);
+
+      if (
+        err.code === "23505" ||
+        err.message?.toLowerCase().includes("duplicate")
+      ) {
+        setError("SKU already exists. Please use a unique SKU.");
+      } else {
+        setError(err.message || "Failed to save product.");
+      }
     }
-
-    closeModal();
   };
 
-  const handleDeactivate = (productId) => {
+  const handleDeactivate = async (productId) => {
     const confirmed = window.confirm(
       "Are you sure you want to deactivate this product?"
     );
@@ -150,29 +178,31 @@ function Products() {
       return;
     }
 
-    setProducts((currentProducts) =>
-      currentProducts.map((product) =>
-        product.id === productId
-          ? {
-              ...product,
-              isActive: false,
-            }
-          : product
-      )
-    );
+    try {
+      setError("");
+
+      await deactivateProduct(productId);
+
+      await loadProducts();
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to deactivate product.");
+    }
   };
 
-  const handleActivate = (productId) => {
-    setProducts((currentProducts) =>
-      currentProducts.map((product) =>
-        product.id === productId
-          ? {
-              ...product,
-              isActive: true,
-            }
-          : product
-      )
-    );
+  const handleActivate = async (productId) => {
+    try {
+      setError("");
+
+      await updateProduct(productId, {
+        is_active: true,
+      });
+
+      await loadProducts();
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to activate product.");
+    }
   };
 
   const totalProducts = products.length;
@@ -192,11 +222,13 @@ function Products() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
+
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
               Product Management
             </h1>
+
             <p className="mt-1 text-sm text-gray-500">
               Manage products, stock levels and reorder levels
             </p>
@@ -210,34 +242,54 @@ function Products() {
           </button>
         </div>
 
+        {error && (
+          <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">Total Products</p>
+            <p className="text-sm text-gray-500">
+              Total Products
+            </p>
+
             <p className="mt-1 text-2xl font-bold text-gray-900">
               {totalProducts}
             </p>
           </div>
 
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">Active Products</p>
+            <p className="text-sm text-gray-500">
+              Active Products
+            </p>
+
             <p className="mt-1 text-2xl font-bold text-green-600">
               {activeProducts}
             </p>
           </div>
 
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">Low Stock</p>
+            <p className="text-sm text-gray-500">
+              Low Stock
+            </p>
+
             <p className="mt-1 text-2xl font-bold text-yellow-600">
               {lowStockProducts}
             </p>
           </div>
 
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">Out of Stock</p>
+            <p className="text-sm text-gray-500">
+              Out of Stock
+            </p>
+
             <p className="mt-1 text-2xl font-bold text-red-600">
               {outOfStockProducts}
             </p>
           </div>
+
         </div>
 
         <ProductFilters
@@ -252,13 +304,19 @@ function Products() {
           categories={categories}
         />
 
-        <ProductTable
-          products={filteredProducts}
-          getStockStatus={getStockStatus}
-          onEdit={openEditModal}
-          onDeactivate={handleDeactivate}
-          onActivate={handleActivate}
-        />
+        {loading ? (
+          <div className="rounded-xl border bg-white p-10 text-center text-gray-500 shadow-sm">
+            Loading products...
+          </div>
+        ) : (
+          <ProductTable
+            products={filteredProducts}
+            getStockStatus={getStockStatus}
+            onEdit={openEditModal}
+            onDeactivate={handleDeactivate}
+            onActivate={handleActivate}
+          />
+        )}
       </div>
 
       <ProductModal
