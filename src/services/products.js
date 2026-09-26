@@ -1,44 +1,68 @@
 import { supabase } from "./supabase";
 
 export async function getProducts() {
-  const { data, error } = await supabase
-    .from("products")
-    .select(`
-      id,
-      name,
-      sku,
-      category_id,
-      unit_of_measure,
-      initial_stock,
-      reorder_level,
-      is_active,
-      created_at,
-      updated_at
-    `)
-    .order("created_at", { ascending: false });
+  const [productsResult, stockResult] = await Promise.all([
+    supabase
+      .from("products")
+      .select(
+        "id, name, sku, category_id, unit_of_measure, reorder_level, is_active, created_at, updated_at",
+      )
+      .order("created_at", { ascending: false }),
+    supabase.from("product_stock_summary").select("product_id, total_stock"),
+  ]);
 
-  if (error) {
-    throw error;
+  if (productsResult.error) throw productsResult.error;
+  if (stockResult.error) throw stockResult.error;
+
+  const products = productsResult.data || [];
+  const stockByProduct = new Map(
+    (stockResult.data || []).map((stock) => [
+      stock.product_id,
+      Number(stock.total_stock || 0),
+    ]),
+  );
+  const inactiveIds = products
+    .filter((product) => !product.is_active)
+    .map((product) => product.id);
+
+  if (inactiveIds.length > 0) {
+    const { data: movements, error: movementError } = await supabase
+      .from("stock_movements")
+      .select("product_id, quantity")
+      .in("product_id", inactiveIds);
+
+    if (movementError) throw movementError;
+    for (const movement of movements || []) {
+      stockByProduct.set(
+        movement.product_id,
+        (stockByProduct.get(movement.product_id) || 0) +
+          Number(movement.quantity || 0),
+      );
+    }
   }
 
-  return data || [];
+  return products.map((product) => ({
+    ...product,
+    total_stock: stockByProduct.get(product.id) || 0,
+  }));
 }
 
 export async function getProduct(id) {
   const { data, error } = await supabase
     .from("products")
-    .select(`
+    .select(
+      `
       id,
       name,
       sku,
       category_id,
       unit_of_measure,
-      initial_stock,
       reorder_level,
       is_active,
       created_at,
       updated_at
-    `)
+    `,
+    )
     .eq("id", id)
     .single();
 
@@ -71,7 +95,6 @@ export async function createProduct(product) {
         sku: product.sku,
         category_id: product.category_id,
         unit_of_measure: product.unit_of_measure,
-        initial_stock: product.initial_stock,
         reorder_level: product.reorder_level,
         is_active: true,
       },

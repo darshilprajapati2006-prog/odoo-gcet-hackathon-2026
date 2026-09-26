@@ -48,13 +48,15 @@ export function AuthProvider({ children }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user ?? null;
 
       setUser(currentUser);
 
       if (currentUser) {
-        await loadProfile(currentUser.id);
+        Promise.resolve().then(() => {
+          if (mounted) loadProfile(currentUser.id);
+        });
       } else {
         setProfile(null);
       }
@@ -114,6 +116,14 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const updatePassword = async (password) => {
+    const { data, error } = await supabase.auth.updateUser({ password });
+
+    if (error) throw error;
+
+    return data;
+  };
+
   const value = {
     user,
     profile,
@@ -122,6 +132,7 @@ export function AuthProvider({ children }) {
     signIn,
     signOut,
     resetPassword,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

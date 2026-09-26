@@ -4,7 +4,8 @@ import { supabase } from "./supabase";
 export async function getReceipts() {
   const { data, error } = await supabase
     .from("receipts")
-    .select(`
+    .select(
+      `
       id,
       receipt_number,
       supplier_id,
@@ -33,7 +34,8 @@ export async function getReceipts() {
           sku
         )
       )
-    `)
+    `,
+    )
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -118,11 +120,7 @@ export async function createReceipt({
 }
 
 // Add a product line to a receipt
-export async function addReceiptItem({
-  receiptId,
-  productId,
-  quantity,
-}) {
+export async function addReceiptItem({ receiptId, productId, quantity }) {
   const { data, error } = await supabase
     .from("receipt_items")
     .insert({
@@ -138,6 +136,22 @@ export async function addReceiptItem({
   }
 
   return data;
+}
+
+export async function addReceiptItems({ receiptId, items }) {
+  const { data, error } = await supabase
+    .from("receipt_items")
+    .insert(
+      items.map((item) => ({
+        receipt_id: receiptId,
+        product_id: item.productId,
+        quantity: Number(item.quantity),
+      })),
+    )
+    .select();
+
+  if (error) throw error;
+  return data || [];
 }
 
 // Update receipt status
@@ -166,12 +180,9 @@ export async function updateReceiptStatus(receiptId, status) {
 // validate_receipt() creates stock_movements
 // and changes the receipt status to done.
 export async function validateReceipt(receiptId) {
-  const { data, error } = await supabase.rpc(
-    "validate_receipt",
-    {
-      p_receipt_id: receiptId,
-    }
-  );
+  const { data, error } = await supabase.rpc("validate_receipt", {
+    p_receipt_id: receiptId,
+  });
 
   if (error) {
     throw error;

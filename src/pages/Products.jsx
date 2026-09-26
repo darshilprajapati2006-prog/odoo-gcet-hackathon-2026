@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ProductFilters from "../features/products/ProductFilters";
 import ProductTable from "../features/products/ProductTable";
 import ProductModal from "../features/products/ProductModal";
@@ -25,7 +25,7 @@ function Products() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -34,7 +34,7 @@ function Products() {
 
       const formattedProducts = data.map((product) => {
         const categoryData = categoryOptions.find(
-          (item) => item.id === product.category_id
+          (item) => item.id === product.category_id,
         );
 
         return {
@@ -45,7 +45,7 @@ function Products() {
             categoryData?.name || product.category_id || "Uncategorized",
           category_id: product.category_id,
           unit: product.unit_of_measure,
-          stock: Number(product.initial_stock || 0),
+          stock: Number(product.total_stock || 0),
           reorderLevel: Number(product.reorder_level || 0),
           isActive: product.is_active,
         };
@@ -58,7 +58,7 @@ function Products() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryOptions]);
 
   const loadCategories = async () => {
     try {
@@ -75,10 +75,8 @@ function Products() {
   }, []);
 
   useEffect(() => {
-    if (categoryOptions.length > 0) {
-      loadProducts();
-    }
-  }, [categoryOptions]);
+    loadProducts();
+  }, [loadProducts]);
 
   const getStockStatus = (product) => {
     if (product.stock <= 0) return "Out of Stock";
@@ -87,10 +85,7 @@ function Products() {
   };
 
   const categories = useMemo(() => {
-    return [
-      "All",
-      ...categoryOptions.map((item) => item.name),
-    ];
+    return ["All", ...categoryOptions.map((item) => item.name)];
   }, [categoryOptions]);
 
   const filteredProducts = useMemo(() => {
@@ -121,13 +116,7 @@ function Products() {
         matchesProductStatus
       );
     });
-  }, [
-    products,
-    search,
-    category,
-    stockStatus,
-    productStatus,
-  ]);
+  }, [products, search, category, stockStatus, productStatus]);
 
   const openCreateModal = () => {
     setEditingProduct(null);
@@ -162,7 +151,6 @@ function Products() {
           sku: productData.sku,
           category_id: productData.category_id,
           unit_of_measure: productData.unit,
-          initial_stock: productData.stock,
           reorder_level: productData.reorderLevel,
         });
       }
@@ -185,7 +173,7 @@ function Products() {
 
   const handleDeactivate = async (productId) => {
     const confirmed = window.confirm(
-      "Are you sure you want to deactivate this product?"
+      "Are you sure you want to deactivate this product?",
     );
 
     if (!confirmed) return;
@@ -217,16 +205,14 @@ function Products() {
 
   const totalProducts = products.length;
 
-  const activeProducts = products.filter(
-    (product) => product.isActive
-  ).length;
+  const activeProducts = products.filter((product) => product.isActive).length;
 
   const lowStockProducts = products.filter(
-    (product) => getStockStatus(product) === "Low Stock"
+    (product) => getStockStatus(product) === "Low Stock",
   ).length;
 
   const outOfStockProducts = products.filter(
-    (product) => getStockStatus(product) === "Out of Stock"
+    (product) => getStockStatus(product) === "Out of Stock",
   ).length;
 
   return (
@@ -310,7 +296,6 @@ function Products() {
         ) : (
           <ProductTable
             products={filteredProducts}
-            getStockStatus={getStockStatus}
             onEdit={openEditModal}
             onDeactivate={handleDeactivate}
             onActivate={handleActivate}

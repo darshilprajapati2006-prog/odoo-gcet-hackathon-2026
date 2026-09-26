@@ -34,31 +34,31 @@ const STATUS_OPTIONS = [
 ];
 
 const MOVEMENT_LABELS = {
-  RECEIPT: "Receipt",
-  DELIVERY: "Delivery",
-  TRANSFER_IN: "Transfer In",
-  TRANSFER_OUT: "Transfer Out",
-  ADJUSTMENT: "Adjustment",
+  receipt: "Receipt",
+  delivery: "Delivery",
+  transfer_in: "Transfer In",
+  transfer_out: "Transfer Out",
+  adjustment: "Adjustment",
 };
 
 const MOVEMENT_STYLES = {
-  RECEIPT: {
+  receipt: {
     icon: ArrowDownToLine,
     badge: "bg-emerald-100 text-emerald-700",
   },
-  DELIVERY: {
+  delivery: {
     icon: ArrowUpFromLine,
     badge: "bg-red-100 text-red-700",
   },
-  TRANSFER_IN: {
+  transfer_in: {
     icon: ArrowLeftRight,
     badge: "bg-blue-100 text-blue-700",
   },
-  TRANSFER_OUT: {
+  transfer_out: {
     icon: ArrowLeftRight,
     badge: "bg-orange-100 text-orange-700",
   },
-  ADJUSTMENT: {
+  adjustment: {
     icon: RefreshCw,
     badge: "bg-purple-100 text-purple-700",
   },
@@ -98,7 +98,9 @@ function Dashboard() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  const [stockMovements, setStockMovements] = useState([]);
+  const [stockSummary, setStockSummary] = useState([]);
+  const [stockByLocation, setStockByLocation] = useState([]);
+  const [moveHistory, setMoveHistory] = useState([]);
 
   const [receipts, setReceipts] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
@@ -123,6 +125,8 @@ function Dashboard() {
         productsResult,
         categoriesResult,
         warehousesResult,
+        stockSummaryResult,
+        stockByLocationResult,
         movementsResult,
         receiptsResult,
         deliveriesResult,
@@ -148,9 +152,17 @@ function Dashboard() {
           .order("name"),
 
         supabase
-          .from("stock_movements")
+          .from("product_stock_summary")
+          .select("product_id, total_stock"),
+
+        supabase
+          .from("product_stock_by_location")
+          .select("product_id, warehouse_id, stock_quantity"),
+
+        supabase
+          .from("move_history")
           .select(
-            "id, product_id, warehouse_id, location_id, movement_type, quantity, reference_id, created_at",
+            "id, product_id, warehouse_id, movement_type, quantity, created_at, product_name, sku, warehouse_name",
           )
           .order("created_at", { ascending: false }),
 
@@ -177,6 +189,8 @@ function Dashboard() {
         productsResult,
         categoriesResult,
         warehousesResult,
+        stockSummaryResult,
+        stockByLocationResult,
         movementsResult,
         receiptsResult,
         deliveriesResult,
@@ -193,7 +207,9 @@ function Dashboard() {
       setProducts(productsResult.data || []);
       setCategories(categoriesResult.data || []);
       setWarehouses(warehousesResult.data || []);
-      setStockMovements(movementsResult.data || []);
+      setStockSummary(stockSummaryResult.data || []);
+      setStockByLocation(stockByLocationResult.data || []);
+      setMoveHistory(movementsResult.data || []);
       setReceipts(receiptsResult.data || []);
       setDeliveries(deliveriesResult.data || []);
       setTransfers(transfersResult.data || []);
@@ -222,23 +238,13 @@ function Dashboard() {
     return new Map(warehouses.map((warehouse) => [warehouse.id, warehouse]));
   }, [warehouses]);
 
-  /*
-   * Stock is calculated from stock_movements.
-   *
-   * Positive quantity:
-   *   RECEIPT
-   *   TRANSFER_IN
-   *
-   * Negative quantity:
-   *   DELIVERY
-   *   TRANSFER_OUT
-   *   ADJUSTMENT can be positive or negative
-   */
   const stockByProduct = useMemo(() => {
     const map = new Map();
 
-    for (const movement of stockMovements) {
-      const product = productMap.get(movement.product_id);
+    const stockRows = warehouseId === "all" ? stockSummary : stockByLocation;
+
+    for (const stock of stockRows) {
+      const product = productMap.get(stock.product_id);
 
       if (!product) continue;
 
@@ -246,17 +252,20 @@ function Dashboard() {
         continue;
       }
 
-      if (warehouseId !== "all" && movement.warehouse_id !== warehouseId) {
+      if (warehouseId !== "all" && stock.warehouse_id !== warehouseId) {
         continue;
       }
 
-      const current = map.get(movement.product_id) || 0;
+      const current = map.get(stock.product_id) || 0;
 
-      map.set(movement.product_id, current + Number(movement.quantity || 0));
+      map.set(
+        stock.product_id,
+        current + Number(stock.total_stock ?? stock.stock_quantity ?? 0),
+      );
     }
 
     return map;
-  }, [stockMovements, productMap, categoryId, warehouseId]);
+  }, [stockSummary, stockByLocation, productMap, categoryId, warehouseId]);
 
   const productStock = useMemo(() => {
     return products.map((product) => {
@@ -371,15 +380,14 @@ function Dashboard() {
   }, [filteredDocuments.transfers]);
 
   const filteredMovements = useMemo(() => {
-    return stockMovements
+    return moveHistory
       .filter((movement) => {
-        const product = productMap.get(movement.product_id);
-
-        if (!product) return false;
-
         if (warehouseId !== "all" && movement.warehouse_id !== warehouseId) {
           return false;
         }
+
+        const product = productMap.get(movement.product_id);
+        if (!product) return false;
 
         if (categoryId !== "all" && product.category_id !== categoryId) {
           return false;
@@ -389,8 +397,8 @@ function Dashboard() {
           const query = search.toLowerCase();
 
           const productMatches =
-            product.name?.toLowerCase().includes(query) ||
-            product.sku?.toLowerCase().includes(query);
+            movement.product_name?.toLowerCase().includes(query) ||
+            movement.sku?.toLowerCase().includes(query);
 
           if (!productMatches) return false;
         }
@@ -398,26 +406,19 @@ function Dashboard() {
         const typeMatches =
           documentType === "all" ||
           (documentType === "receipt" &&
-            movement.movement_type === "RECEIPT") ||
+            movement.movement_type === "receipt") ||
           (documentType === "delivery" &&
-            movement.movement_type === "DELIVERY") ||
+            movement.movement_type === "delivery") ||
           (documentType === "transfer" &&
-            (movement.movement_type === "TRANSFER_IN" ||
-              movement.movement_type === "TRANSFER_OUT")) ||
+            (movement.movement_type === "transfer_in" ||
+              movement.movement_type === "transfer_out")) ||
           (documentType === "adjustment" &&
-            movement.movement_type === "ADJUSTMENT");
+            movement.movement_type === "adjustment");
 
         return typeMatches;
       })
       .slice(0, 8);
-  }, [
-    stockMovements,
-    productMap,
-    warehouseId,
-    categoryId,
-    search,
-    documentType,
-  ]);
+  }, [moveHistory, productMap, warehouseId, categoryId, search, documentType]);
 
   const resetFilters = () => {
     setDocumentType("all");
@@ -813,7 +814,7 @@ function Dashboard() {
 
                 const movementStyle =
                   MOVEMENT_STYLES[movement.movement_type] ||
-                  MOVEMENT_STYLES.ADJUSTMENT;
+                  MOVEMENT_STYLES.adjustment;
 
                 const Icon = movementStyle.icon;
 

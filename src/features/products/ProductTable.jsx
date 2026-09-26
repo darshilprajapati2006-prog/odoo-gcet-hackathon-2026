@@ -1,12 +1,6 @@
 import ProductStatusBadge from "./ProductStatusBadge";
 
-function ProductTable({
-  products,
-  getStockStatus,
-  onEdit,
-  onDeactivate,
-  onActivate,
-}) {
+function ProductTable({ products, onEdit, onDeactivate, onActivate }) {
   return (
     <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
       <div className="overflow-x-auto">

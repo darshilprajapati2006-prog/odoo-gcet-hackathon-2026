@@ -3,7 +3,8 @@ import { supabase } from "./supabase";
 export async function getDeliveries() {
   const { data, error } = await supabase
     .from("deliveries")
-    .select(`
+    .select(
+      `
       id,
       delivery_number,
       customer_id,
@@ -32,7 +33,8 @@ export async function getDeliveries() {
           sku
         )
       )
-    `)
+    `,
+    )
     .order("created_at", { ascending: false });
 
   if (error) throw error;
@@ -115,11 +117,7 @@ export async function createDelivery({
   return data;
 }
 
-export async function addDeliveryItem({
-  deliveryId,
-  productId,
-  quantity,
-}) {
+export async function addDeliveryItem({ deliveryId, productId, quantity }) {
   const { data, error } = await supabase
     .from("delivery_items")
     .insert({
@@ -132,6 +130,32 @@ export async function addDeliveryItem({
 
   if (error) throw error;
   return data;
+}
+
+export async function addDeliveryItems({ deliveryId, items }) {
+  const { data, error } = await supabase
+    .from("delivery_items")
+    .insert(
+      items.map((item) => ({
+        delivery_id: deliveryId,
+        product_id: item.productId,
+        quantity: Number(item.quantity),
+      })),
+    )
+    .select();
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function deleteDelivery(deliveryId) {
+  const { error } = await supabase
+    .from("deliveries")
+    .delete()
+    .eq("id", deliveryId)
+    .eq("status", "draft");
+
+  if (error) throw error;
 }
 
 export async function updateDeliveryStatus(deliveryId, status) {

@@ -6,7 +6,8 @@ import {
   getProducts,
   getLocations,
   createReceipt,
-  addReceiptItem,
+  addReceiptItems,
+  deleteReceipt,
   updateReceiptStatus,
   validateReceipt,
 } from "../services/receipts";
@@ -42,11 +43,10 @@ function Receipts() {
     supplierId: "",
     warehouseId: "",
     destinationLocationId: "",
-    productId: "",
-    quantity: "",
     expectedDate: "",
     notes: "",
   });
+  const [items, setItems] = useState([{ productId: "", quantity: "" }]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,17 +58,13 @@ function Receipts() {
       setLoading(true);
       setError("");
 
-      const [
-        receiptsData,
-        suppliersData,
-        warehousesData,
-        productsData,
-      ] = await Promise.all([
-        getReceipts(),
-        getSuppliers(),
-        getWarehouses(),
-        getProducts(),
-      ]);
+      const [receiptsData, suppliersData, warehousesData, productsData] =
+        await Promise.all([
+          getReceipts(),
+          getSuppliers(),
+          getWarehouses(),
+          getProducts(),
+        ]);
 
       setReceipts(receiptsData);
       setSuppliers(suppliersData);
@@ -128,21 +124,21 @@ function Receipts() {
   const totalReceipts = receipts.length;
 
   const draftCount = receipts.filter(
-    (receipt) => receipt.status === "draft"
+    (receipt) => receipt.status === "draft",
   ).length;
 
   const readyCount = receipts.filter(
-    (receipt) => receipt.status === "ready"
+    (receipt) => receipt.status === "ready",
   ).length;
 
   const doneCount = receipts.filter(
-    (receipt) => receipt.status === "done"
+    (receipt) => receipt.status === "done",
   ).length;
 
   const totalQuantity = receipts.reduce((total, receipt) => {
     const receiptQuantity = (receipt.receipt_items || []).reduce(
       (sum, item) => sum + Number(item.quantity || 0),
-      0
+      0,
     );
 
     return total + receiptQuantity;
@@ -171,11 +167,18 @@ function Receipts() {
       supplierId: "",
       warehouseId: "",
       destinationLocationId: "",
-      productId: "",
-      quantity: "",
       expectedDate: "",
       notes: "",
     });
+    setItems([{ productId: "", quantity: "" }]);
+  }
+
+  function handleItemChange(index, field, value) {
+    setItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    );
   }
 
   async function handleCreateReceipt(event) {
@@ -185,15 +188,17 @@ function Receipts() {
       !form.receiptNumber ||
       !form.warehouseId ||
       !form.destinationLocationId ||
-      !form.productId ||
-      !form.quantity
+      items.length === 0 ||
+      items.some((item) => !item.productId || Number(item.quantity) <= 0)
     ) {
-      setError("Please fill all required fields.");
+      setError(
+        "Add at least one product and enter a quantity greater than zero for every line.",
+      );
       return;
     }
 
-    if (Number(form.quantity) <= 0) {
-      setError("Quantity must be greater than 0.");
+    if (new Set(items.map((item) => item.productId)).size !== items.length) {
+      setError("Each product can only appear once on a receipt.");
       return;
     }
 
@@ -210,11 +215,12 @@ function Receipts() {
         notes: form.notes.trim() || null,
       });
 
-      await addReceiptItem({
-        receiptId: receipt.id,
-        productId: form.productId,
-        quantity: form.quantity,
-      });
+      try {
+        await addReceiptItems({ receiptId: receipt.id, items });
+      } catch (itemError) {
+        await deleteReceipt(receipt.id);
+        throw itemError;
+      }
 
       resetForm();
       setShowForm(false);
@@ -299,9 +305,7 @@ function Receipts() {
     }
 
     return (
-      <span className="text-sm font-medium text-green-600">
-        ✓ Completed
-      </span>
+      <span className="text-sm font-medium text-green-600">✓ Completed</span>
     );
   }
 
@@ -310,9 +314,7 @@ function Receipts() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Receipts
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-900">Receipts</h1>
 
           <p className="mt-1 text-slate-500">
             Manage incoming inventory receipts.
@@ -340,45 +342,29 @@ function Receipts() {
       {/* Summary */}
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Total Receipts
-          </p>
+          <p className="text-sm font-medium text-slate-500">Total Receipts</p>
           <p className="mt-2 text-3xl font-bold text-slate-900">
             {totalReceipts}
           </p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Draft
-          </p>
-          <p className="mt-2 text-3xl font-bold text-slate-600">
-            {draftCount}
-          </p>
+          <p className="text-sm font-medium text-slate-500">Draft</p>
+          <p className="mt-2 text-3xl font-bold text-slate-600">{draftCount}</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Ready
-          </p>
-          <p className="mt-2 text-3xl font-bold text-blue-600">
-            {readyCount}
-          </p>
+          <p className="text-sm font-medium text-slate-500">Ready</p>
+          <p className="mt-2 text-3xl font-bold text-blue-600">{readyCount}</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Completed
-          </p>
-          <p className="mt-2 text-3xl font-bold text-green-600">
-            {doneCount}
-          </p>
+          <p className="text-sm font-medium text-slate-500">Completed</p>
+          <p className="mt-2 text-3xl font-bold text-green-600">{doneCount}</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Total Quantity
-          </p>
+          <p className="text-sm font-medium text-slate-500">Total Quantity</p>
           <p className="mt-2 text-3xl font-bold text-slate-900">
             {totalQuantity}
           </p>
@@ -464,11 +450,10 @@ function Receipts() {
                 filteredReceipts.map((receipt) => {
                   const quantity = (receipt.receipt_items || []).reduce(
                     (sum, item) => sum + Number(item.quantity || 0),
-                    0
+                    0,
                   );
 
-                  const supplierName =
-                    receipt.suppliers?.name || "No supplier";
+                  const supplierName = receipt.suppliers?.name || "No supplier";
 
                   const warehouseName =
                     receipt.warehouses?.name || "Unknown warehouse";
@@ -561,10 +546,7 @@ function Receipts() {
               </button>
             </div>
 
-            <form
-              onSubmit={handleCreateReceipt}
-              className="space-y-5 p-6"
-            >
+            <form onSubmit={handleCreateReceipt} className="space-y-5 p-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
@@ -633,9 +615,7 @@ function Receipts() {
                     {warehouses.map((warehouse) => (
                       <option key={warehouse.id} value={warehouse.id}>
                         {warehouse.name}
-                        {warehouse.code
-                          ? ` (${warehouse.code})`
-                          : ""}
+                        {warehouse.code ? ` (${warehouse.code})` : ""}
                       </option>
                     ))}
                   </select>
@@ -663,54 +643,78 @@ function Receipts() {
                     {locations.map((location) => (
                       <option key={location.id} value={location.id}>
                         {location.name}
-                        {location.code
-                          ? ` (${location.code})`
-                          : ""}
+                        {location.code ? ` (${location.code})` : ""}
                       </option>
                     ))}
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Product *
-                  </label>
-
-                  <select
-                    name="productId"
-                    value={form.productId}
-                    onChange={handleFormChange}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-                    required
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    Products
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setItems((current) => [
+                        ...current,
+                        { productId: "", quantity: "" },
+                      ])
+                    }
+                    className="text-sm font-semibold text-blue-700"
                   >
-                    <option value="">Select Product</option>
-
-                    {products.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name}
-                        {product.sku ? ` (${product.sku})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    Add product
+                  </button>
                 </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Quantity *
-                  </label>
-
-                  <input
-                    type="number"
-                    min="0.001"
-                    step="0.001"
-                    name="quantity"
-                    value={form.quantity}
-                    onChange={handleFormChange}
-                    placeholder="100"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
-                    required
-                  />
-                </div>
+                {items.map((item, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_180px_auto]"
+                  >
+                    <select
+                      value={item.productId}
+                      onChange={(event) =>
+                        handleItemChange(index, "productId", event.target.value)
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                      required
+                    >
+                      <option value="">Select Product</option>
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} ({product.sku})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0.001"
+                      step="0.001"
+                      value={item.quantity}
+                      onChange={(event) =>
+                        handleItemChange(index, "quantity", event.target.value)
+                      }
+                      placeholder="Quantity"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-blue-500"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setItems((current) =>
+                          current.filter((_, itemIndex) => itemIndex !== index),
+                        )
+                      }
+                      disabled={items.length === 1}
+                      aria-label="Remove product"
+                      className="rounded-md border border-slate-300 px-3 text-slate-600 disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
 
               <div>

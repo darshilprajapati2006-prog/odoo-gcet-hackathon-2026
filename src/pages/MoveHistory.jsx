@@ -1,412 +1,315 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getMoveHistory, getMovementOptions } from "../services/movements";
+
+const emptyFilters = {
+  productId: "",
+  movementType: "",
+  warehouseId: "",
+  locationId: "",
+  dateFrom: "",
+  dateTo: "",
+};
+
+const movementLabels = {
+  receipt: "Receipt",
+  delivery: "Delivery",
+  transfer_in: "Transfer In",
+  transfer_out: "Transfer Out",
+  adjustment: "Adjustment",
+};
 
 export default function MoveHistory() {
-  const [search, setSearch] = useState("");
-  const [movementType, setMovementType] = useState("");
+  const [filters, setFilters] = useState(emptyFilters);
   const [movements, setMovements] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      setMovements(await getMoveHistory(filters));
+    } catch (loadError) {
+      setError(loadError.message || "Failed to load movement history.");
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
 
   useEffect(() => {
-    const transferData =
-      JSON.parse(localStorage.getItem("transfers")) || [];
-
-    const adjustmentData =
-      JSON.parse(localStorage.getItem("adjustments")) || [];
-
-    const transferMoves = transferData.flatMap((t) => [
-      {
-        id: `${t.id}-out`,
-        date: t.date || new Date().toLocaleDateString(),
-        product: t.product,
-        type: "TRANSFER_OUT",
-        quantity: -Number(t.quantity),
-        warehouse: t.sourceWarehouse,
-        location: t.sourceLocation,
-        reference: `TRF-${t.id}`,
-        user: "Admin",
-      },
-      {
-        id: `${t.id}-in`,
-        date: t.date || new Date().toLocaleDateString(),
-        product: t.product,
-        type: "TRANSFER_IN",
-        quantity: Number(t.quantity),
-        warehouse: t.destinationWarehouse,
-        location: t.destinationLocation,
-        reference: `TRF-${t.id}`,
-        user: "Admin",
-      },
-    ]);
-
-    const adjustmentMoves = adjustmentData.map((a) => ({
-      id: a.id,
-      date: a.date || new Date().toLocaleDateString(),
-      product: a.product,
-      type: "ADJUSTMENT",
-      quantity: Number(a.difference),
-      warehouse: a.warehouse,
-      location: a.location,
-      reference: `ADJ-${a.id}`,
-      user: "Admin",
-    }));
-
-    const allMovements = [
-      ...transferMoves,
-      ...adjustmentMoves,
-    ].sort((a, b) => b.id - a.id);
-
-    setMovements(allMovements);
+    getMovementOptions()
+      .then((options) => {
+        setProducts(options.products);
+        setWarehouses(options.warehouses);
+        setLocations(options.locations);
+      })
+      .catch((loadError) =>
+        setError(loadError.message || "Failed to load filters."),
+      );
   }, []);
 
-  const filteredMovements = useMemo(() => {
-    return movements.filter((m) => {
-      const productMatch = m.product
-        ?.toLowerCase()
-        .includes(search.toLowerCase());
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
-      const typeMatch =
-        movementType === "" || m.type === movementType;
+  const summary = useMemo(() => {
+    const inbound = movements
+      .filter((movement) => Number(movement.quantity) > 0)
+      .reduce((total, movement) => total + Number(movement.quantity), 0);
+    const outbound = movements
+      .filter((movement) => Number(movement.quantity) < 0)
+      .reduce((total, movement) => total + Number(movement.quantity), 0);
+    return { inbound, outbound, net: inbound + outbound };
+  }, [movements]);
 
-      return productMatch && typeMatch;
-    });
-  }, [movements, search, movementType]);
+  const setFilter = (name, value) => {
+    setFilters((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === "warehouseId" ? { locationId: "" } : {}),
+    }));
+  };
 
-  const totalIn = movements
-    .filter((m) => m.quantity > 0)
-    .reduce((sum, m) => sum + m.quantity, 0);
-
-  const totalOut = Math.abs(
-    movements
-      .filter((m) => m.quantity < 0)
-      .reduce((sum, m) => sum + m.quantity, 0)
-  );
-
-  const netMovement = totalIn - totalOut;
+  const formatDate = (value) =>
+    value
+      ? new Date(value).toLocaleString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "-";
 
   return (
-    <div
-      style={{
-        padding: "30px",
-        background: "#f3f6fb",
-        minHeight: "100vh",
-      }}
-    >
-      <h2
-        style={{
-          marginBottom: "25px",
-          color: "#111827",
-        }}
-      >
-        Stock Move History
-      </h2>
-
-      {/* SUMMARY */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(220px,1fr))",
-          gap: "20px",
-          marginBottom: "25px",
-        }}
-      >
-        <SummaryCard
-          title="Total Movements"
-          value={movements.length}
-        />
-
-        <SummaryCard
-          title="Total Stock In"
-          value={`+${totalIn}`}
-          color="green"
-        />
-
-        <SummaryCard
-          title="Total Stock Out"
-          value={`-${totalOut}`}
-          color="red"
-        />
-
-        <SummaryCard
-          title="Net Movement"
-          value={netMovement}
-          color="#2563eb"
-        />
-      </div>
-
-      {/* FILTERS */}
-      <div style={card}>
-        <h3 style={{ marginBottom: 18 }}>
-          Filters
-        </h3>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit,minmax(250px,1fr))",
-            gap: "15px",
-          }}
-        >
-          <input
-            placeholder="Search Product"
-            value={search}
-            onChange={(e) =>
-              setSearch(e.target.value)
-            }
-            style={input}
-          />
-
-          <select
-            value={movementType}
-            onChange={(e) =>
-              setMovementType(e.target.value)
-            }
-            style={input}
-          >
-            <option value="">
-              All Movement Types
-            </option>
-
-            <option value="TRANSFER_IN">
-              TRANSFER_IN
-            </option>
-
-            <option value="TRANSFER_OUT">
-              TRANSFER_OUT
-            </option>
-
-            <option value="ADJUSTMENT">
-              ADJUSTMENT
-            </option>
-          </select>
+    <div className="space-y-6">
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Move History</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Inventory movements recorded in the stock ledger.
+          </p>
         </div>
-      </div>
-
-      {/* RECENT ACTIVITY */}
-      <div
-        style={{
-          ...card,
-          marginTop: 25,
-        }}
-      >
-        <h3>Recent Activity</h3>
-
-        {movements.length === 0 ? (
-          <p>No recent activity.</p>
-        ) : (
-          <div
-            style={{
-              marginTop: 15,
-            }}
-          >
-            {movements.slice(0, 5).map((m) => (
-              <div
-                key={m.id}
-                style={{
-                  padding: "12px 0",
-                  borderBottom:
-                    "1px solid #e5e7eb",
-                }}
-              >
-                <strong>{m.product}</strong>{" "}
-                {m.type} (
-                <span
-                  style={{
-                    color:
-                      m.quantity > 0
-                        ? "green"
-                        : "red",
-                  }}
-                >
-                  {m.quantity > 0
-                    ? `+${m.quantity}`
-                    : m.quantity}
-                </span>
-                )
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* TABLE */}
-      <div
-        style={{
-          ...card,
-          marginTop: "25px",
-        }}
-      >
-        <h3 style={{ marginBottom: "20px" }}>
-          Stock Ledger
-        </h3>
-
-        <div
-          style={{
-            overflowX: "auto",
-          }}
+        <button
+          type="button"
+          onClick={loadHistory}
+          className="rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
-          <table
-            style={{
-              width: "100%",
-              borderCollapse:
-                "collapse",
-            }}
+          Refresh
+        </button>
+      </header>
+
+      {error && (
+        <div
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Summary title="Movements" value={movements.length} />
+        <Summary
+          title="Stock In"
+          value={`+${summary.inbound}`}
+          tone="text-emerald-700"
+        />
+        <Summary
+          title="Stock Out"
+          value={summary.outbound}
+          tone="text-red-700"
+        />
+        <Summary title="Net Movement" value={summary.net} />
+      </div>
+
+      <section className="rounded-md border border-slate-200 bg-white p-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <Select
+            label="Product"
+            value={filters.productId}
+            onChange={(value) => setFilter("productId", value)}
           >
-            <thead>
-              <tr
-                style={{
-                  background:
-                    "#2563eb",
-                  color: "#fff",
-                }}
-              >
-                <th style={th}>Date</th>
-                <th style={th}>Product</th>
-                <th style={th}>Type</th>
-                <th style={th}>Quantity</th>
-                <th style={th}>Warehouse</th>
-                <th style={th}>Location</th>
-                <th style={th}>Reference</th>
-                <th style={th}>User</th>
+            <option value="">All products</option>
+            {products.map((product) => (
+              <option key={product.id} value={product.id}>
+                {product.name} ({product.sku})
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Movement Type"
+            value={filters.movementType}
+            onChange={(value) => setFilter("movementType", value)}
+          >
+            <option value="">All movement types</option>
+            {Object.entries(movementLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Warehouse"
+            value={filters.warehouseId}
+            onChange={(value) => setFilter("warehouseId", value)}
+          >
+            <option value="">All warehouses</option>
+            {warehouses.map((warehouse) => (
+              <option key={warehouse.id} value={warehouse.id}>
+                {warehouse.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Location"
+            value={filters.locationId}
+            onChange={(value) => setFilter("locationId", value)}
+          >
+            <option value="">All locations</option>
+            {locations
+              .filter(
+                (location) =>
+                  !filters.warehouseId ||
+                  location.warehouse_id === filters.warehouseId,
+              )
+              .map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+          </Select>
+          <label className="block text-sm font-medium text-slate-700">
+            <span className="mb-1.5 block">From</span>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(event) => setFilter("dateFrom", event.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="block text-sm font-medium text-slate-700">
+            <span className="mb-1.5 block">To</span>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(event) => setFilter("dateTo", event.target.value)}
+              className={inputClass}
+            />
+          </label>
+        </div>
+        <button
+          type="button"
+          onClick={() => setFilters(emptyFilters)}
+          className="mt-3 text-sm font-semibold text-blue-700 hover:text-blue-900"
+        >
+          Clear filters
+        </button>
+      </section>
+
+      <section className="overflow-hidden rounded-md border border-slate-200 bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1050px] text-left text-sm">
+            <thead className="bg-slate-50 text-slate-600">
+              <tr>
+                <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Product</th>
+                <th className="px-4 py-3">Movement</th>
+                <th className="px-4 py-3 text-right">Quantity</th>
+                <th className="px-4 py-3">Warehouse</th>
+                <th className="px-4 py-3">Location</th>
+                <th className="px-4 py-3">Reference</th>
+                <th className="px-4 py-3">User</th>
               </tr>
             </thead>
-
-            <tbody>
-              {filteredMovements.map(
-                (move) => (
-                  <tr key={move.id}>
-                    <td style={td}>
-                      {move.date}
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan="8"
+                    className="px-4 py-10 text-center text-slate-500"
+                  >
+                    Loading movement history...
+                  </td>
+                </tr>
+              ) : movements.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="8"
+                    className="px-4 py-10 text-center text-slate-500"
+                  >
+                    No movement history found.
+                  </td>
+                </tr>
+              ) : (
+                movements.map((movement) => (
+                  <tr key={movement.id}>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {formatDate(movement.created_at)}
                     </td>
-
-                    <td style={td}>
-                      {move.product}
-                    </td>
-
-                    <td style={td}>
-                      <span
-                        style={{
-                          padding:
-                            "6px 12px",
-                          borderRadius:
-                            "20px",
-                          background:
-                            "#eef2ff",
-                          fontSize:
-                            "13px",
-                        }}
-                      >
-                        {move.type}
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-slate-900">
+                        {movement.product_name}
+                      </span>
+                      <span className="ml-2 text-xs text-slate-500">
+                        {movement.sku}
                       </span>
                     </td>
-
-                    <td style={td}>
-                      <span
-                        style={{
-                          color:
-                            move.quantity >
-                            0
-                              ? "green"
-                              : "red",
-                          fontWeight:
-                            "bold",
-                        }}
-                      >
-                        {move.quantity >
-                        0
-                          ? `+${move.quantity}`
-                          : move.quantity}
-                      </span>
+                    <td className="px-4 py-3">
+                      {movementLabels[movement.movement_type] ||
+                        movement.movement_type}
                     </td>
-
-                    <td style={td}>
-                      {move.warehouse}
+                    <td
+                      className={`px-4 py-3 text-right font-semibold ${Number(movement.quantity) < 0 ? "text-red-600" : "text-emerald-700"}`}
+                    >
+                      {Number(movement.quantity) > 0 ? "+" : ""}
+                      {movement.quantity}
                     </td>
-
-                    <td style={td}>
-                      {move.location}
+                    <td className="px-4 py-3">{movement.warehouse_name}</td>
+                    <td className="px-4 py-3">{movement.location_name}</td>
+                    <td className="px-4 py-3">
+                      {movement.reference_number || "-"}
                     </td>
-
-                    <td style={td}>
-                      {move.reference}
-                    </td>
-
-                    <td style={td}>
-                      {move.user}
+                    <td className="px-4 py-3">
+                      {movement.created_by_name || "-"}
                     </td>
                   </tr>
-                )
+                ))
               )}
             </tbody>
           </table>
         </div>
-
-        {filteredMovements.length ===
-          0 && (
-          <p
-            style={{
-              marginTop: 20,
-              textAlign:
-                "center",
-            }}
-          >
-            No movement found
-          </p>
-        )}
-      </div>
+      </section>
     </div>
   );
 }
 
-function SummaryCard({
-  title,
-  value,
-  color = "#111827",
-}) {
+function Summary({ title, value, tone = "text-slate-900" }) {
   return (
-    <div style={card}>
-      <div
-        style={{
-          color: "#6b7280",
-          marginBottom: 10,
-        }}
-      >
-        {title}
-      </div>
-
-      <h1
-        style={{
-          margin: 0,
-          color,
-        }}
-      >
-        {value}
-      </h1>
+    <div className="rounded-md border border-slate-200 bg-white p-4">
+      <p className="text-sm text-slate-500">{title}</p>
+      <p className={`mt-1 text-2xl font-bold ${tone}`}>{value}</p>
     </div>
   );
 }
 
-const card = {
-  background: "#fff",
-  padding: "22px",
-  borderRadius: "18px",
-  boxShadow:
-    "0 2px 12px rgba(0,0,0,0.06)",
-};
+function Select({ label, value, onChange, children }) {
+  return (
+    <label className="block text-sm font-medium text-slate-700">
+      <span className="mb-1.5 block">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={inputClass}
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
 
-const input = {
-  width: "100%",
-  padding: "12px",
-  borderRadius: "10px",
-  border: "1px solid #d1d5db",
-};
-
-const th = {
-  padding: "14px",
-  textAlign: "left",
-};
-
-const td = {
-  padding: "14px",
-  borderBottom: "1px solid #e5e7eb",
-};
+const inputClass =
+  "w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500";

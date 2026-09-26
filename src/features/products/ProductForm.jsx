@@ -12,7 +12,6 @@ function ProductForm({
     sku: "",
     category_id: "",
     unit: "",
-    stock: "",
     reorderLevel: "",
   });
 
@@ -25,7 +24,6 @@ function ProductForm({
         sku: editingProduct.sku || "",
         category_id: editingProduct.category_id || "",
         unit: editingProduct.unit || "",
-        stock: editingProduct.stock ?? "",
         reorderLevel: editingProduct.reorderLevel ?? "",
       });
     } else {
@@ -34,7 +32,6 @@ function ProductForm({
         sku: "",
         category_id: "",
         unit: "",
-        stock: "",
         reorderLevel: "",
       });
     }
@@ -79,12 +76,6 @@ function ProductForm({
       newErrors.unit = "Unit of Measure is required.";
     }
 
-    if (formData.stock === "") {
-      newErrors.stock = "Initial stock is required.";
-    } else if (Number(formData.stock) < 0) {
-      newErrors.stock = "Initial stock cannot be negative.";
-    }
-
     if (formData.reorderLevel === "") {
       newErrors.reorderLevel = "Reorder level is required.";
     } else if (Number(formData.reorderLevel) < 0) {
@@ -94,7 +85,7 @@ function ProductForm({
     const duplicateSku = products.some(
       (product) =>
         product.sku.toLowerCase() === sku.toLowerCase() &&
-        product.id !== editingProduct?.id
+        product.id !== editingProduct?.id,
     );
 
     if (duplicateSku) {
@@ -118,7 +109,6 @@ function ProductForm({
       sku: formData.sku.trim(),
       category_id: formData.category_id,
       unit: formData.unit.trim(),
-      stock: Number(formData.stock),
       reorderLevel: Number(formData.reorderLevel),
     });
   };
@@ -191,9 +181,7 @@ function ProductForm({
           </select>
 
           {errors.category_id && (
-            <p className="mt-1 text-sm text-red-500">
-              {errors.category_id}
-            </p>
+            <p className="mt-1 text-sm text-red-500">{errors.category_id}</p>
           )}
         </div>
 
@@ -222,28 +210,6 @@ function ProductForm({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
-            Initial Stock
-          </label>
-
-          <input
-            type="number"
-            min="0"
-            name="stock"
-            value={formData.stock}
-            onChange={handleChange}
-            placeholder="0"
-            className={`w-full rounded-lg border px-3 py-2.5 outline-none focus:border-blue-500 ${
-              errors.stock ? "border-red-500" : "border-gray-300"
-            }`}
-          />
-
-          {errors.stock && (
-            <p className="mt-1 text-sm text-red-500">{errors.stock}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
             Reorder Level
           </label>
 
@@ -255,16 +221,12 @@ function ProductForm({
             onChange={handleChange}
             placeholder="0"
             className={`w-full rounded-lg border px-3 py-2.5 outline-none focus:border-blue-500 ${
-              errors.reorderLevel
-                ? "border-red-500"
-                : "border-gray-300"
+              errors.reorderLevel ? "border-red-500" : "border-gray-300"
             }`}
           />
 
           {errors.reorderLevel && (
-            <p className="mt-1 text-sm text-red-500">
-              {errors.reorderLevel}
-            </p>
+            <p className="mt-1 text-sm text-red-500">{errors.reorderLevel}</p>
           )}
         </div>
       </div>

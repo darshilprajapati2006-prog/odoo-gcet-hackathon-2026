@@ -1,11 +1,9 @@
 import {
   BarChart3,
   Boxes,
-  ClipboardList,
   FileInput,
   FileOutput,
   History,
-  Settings,
   Warehouse,
   ArrowLeftRight,
   ClipboardCheck,
@@ -144,21 +142,6 @@ function Sidebar({ open, onClose }) {
           >
             <UserCircle size={19} />
             <span>My Profile</span>
-          </NavLink>
-
-          <NavLink
-            to="/settings"
-            onClick={onClose}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
-              }`
-            }
-          >
-            <Settings size={19} />
-            <span>Settings</span>
           </NavLink>
         </nav>
 

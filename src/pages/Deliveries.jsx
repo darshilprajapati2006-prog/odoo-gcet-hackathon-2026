@@ -6,7 +6,8 @@ import {
   getProducts,
   getLocations,
   createDelivery,
-  addDeliveryItem,
+  addDeliveryItems,
+  deleteDelivery,
   updateDeliveryStatus,
   validateDelivery,
 } from "../services/deliveries";
@@ -42,11 +43,10 @@ function Deliveries() {
     customerId: "",
     warehouseId: "",
     sourceLocationId: "",
-    productId: "",
-    quantity: "",
     scheduledDate: "",
     notes: "",
   });
+  const [items, setItems] = useState([{ productId: "", quantity: "" }]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,17 +58,13 @@ function Deliveries() {
       setLoading(true);
       setError("");
 
-      const [
-        deliveriesData,
-        customersData,
-        warehousesData,
-        productsData,
-      ] = await Promise.all([
-        getDeliveries(),
-        getCustomers(),
-        getWarehouses(),
-        getProducts(),
-      ]);
+      const [deliveriesData, customersData, warehousesData, productsData] =
+        await Promise.all([
+          getDeliveries(),
+          getCustomers(),
+          getWarehouses(),
+          getProducts(),
+        ]);
 
       setDeliveries(deliveriesData);
       setCustomers(customersData);
@@ -109,22 +105,17 @@ function Deliveries() {
     const searchText = search.toLowerCase().trim();
 
     return deliveries.filter((delivery) => {
-      const customerName =
-        delivery.customers?.name || "No customer";
+      const customerName = delivery.customers?.name || "No customer";
 
-      const warehouseName =
-        delivery.warehouses?.name || "Unknown warehouse";
+      const warehouseName = delivery.warehouses?.name || "Unknown warehouse";
 
       const matchesSearch =
-        delivery.delivery_number
-          ?.toLowerCase()
-          .includes(searchText) ||
+        delivery.delivery_number?.toLowerCase().includes(searchText) ||
         customerName.toLowerCase().includes(searchText) ||
         warehouseName.toLowerCase().includes(searchText);
 
       const matchesStatus =
-        statusFilter === "all" ||
-        delivery.status === statusFilter;
+        statusFilter === "all" || delivery.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
@@ -133,7 +124,7 @@ function Deliveries() {
   const totalQuantity = deliveries.reduce((total, delivery) => {
     const quantity = (delivery.delivery_items || []).reduce(
       (sum, item) => sum + Number(item.quantity || 0),
-      0
+      0,
     );
 
     return total + quantity;
@@ -145,9 +136,7 @@ function Deliveries() {
     setForm((current) => ({
       ...current,
       [name]: value,
-      ...(name === "warehouseId"
-        ? { sourceLocationId: "" }
-        : {}),
+      ...(name === "warehouseId" ? { sourceLocationId: "" } : {}),
     }));
   }
 
@@ -157,11 +146,18 @@ function Deliveries() {
       customerId: "",
       warehouseId: "",
       sourceLocationId: "",
-      productId: "",
-      quantity: "",
       scheduledDate: "",
       notes: "",
     });
+    setItems([{ productId: "", quantity: "" }]);
+  }
+
+  function handleItemChange(index, field, value) {
+    setItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item,
+      ),
+    );
   }
 
   async function handleCreateDelivery(event) {
@@ -171,15 +167,17 @@ function Deliveries() {
       !form.deliveryNumber ||
       !form.warehouseId ||
       !form.sourceLocationId ||
-      !form.productId ||
-      !form.quantity
+      items.length === 0 ||
+      items.some((item) => !item.productId || Number(item.quantity) <= 0)
     ) {
-      setError("Please fill all required fields.");
+      setError(
+        "Add at least one product and enter a quantity greater than zero for every line.",
+      );
       return;
     }
 
-    if (Number(form.quantity) <= 0) {
-      setError("Quantity must be greater than 0.");
+    if (new Set(items.map((item) => item.productId)).size !== items.length) {
+      setError("Each product can only appear once on a delivery.");
       return;
     }
 
@@ -196,11 +194,12 @@ function Deliveries() {
         notes: form.notes.trim() || null,
       });
 
-      await addDeliveryItem({
-        deliveryId: delivery.id,
-        productId: form.productId,
-        quantity: form.quantity,
-      });
+      try {
+        await addDeliveryItems({ deliveryId: delivery.id, items });
+      } catch (itemError) {
+        await deleteDelivery(delivery.id);
+        throw itemError;
+      }
 
       resetForm();
       setShowForm(false);
@@ -240,8 +239,7 @@ function Deliveries() {
       console.error(err);
 
       setError(
-        err.message ||
-          "Delivery validation failed. Check available stock."
+        err.message || "Delivery validation failed. Check available stock.",
       );
     } finally {
       setActionId(null);
@@ -254,9 +252,7 @@ function Deliveries() {
     if (delivery.status === "draft") {
       return (
         <button
-          onClick={() =>
-            handleStatusChange(delivery.id, "waiting")
-          }
+          onClick={() => handleStatusChange(delivery.id, "waiting")}
           disabled={busy}
           className="rounded-lg bg-yellow-500 px-3 py-2 text-sm font-medium text-white hover:bg-yellow-600 disabled:opacity-50"
         >
@@ -268,9 +264,7 @@ function Deliveries() {
     if (delivery.status === "waiting") {
       return (
         <button
-          onClick={() =>
-            handleStatusChange(delivery.id, "ready")
-          }
+          onClick={() => handleStatusChange(delivery.id, "ready")}
           disabled={busy}
           className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
@@ -292,9 +286,7 @@ function Deliveries() {
     }
 
     return (
-      <span className="text-sm font-medium text-green-600">
-        ✓ Completed
-      </span>
+      <span className="text-sm font-medium text-green-600">✓ Completed</span>
     );
   }
 
@@ -303,9 +295,7 @@ function Deliveries() {
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Deliveries
-          </h1>
+          <h1 className="text-3xl font-bold text-slate-900">Deliveries</h1>
           <p className="mt-1 text-slate-500">
             Manage outgoing inventory deliveries.
           </p>
@@ -333,36 +323,26 @@ function Deliveries() {
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
         <div className="rounded-xl border bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Total Deliveries</p>
-          <p className="mt-2 text-3xl font-bold">
-            {deliveries.length}
-          </p>
+          <p className="mt-2 text-3xl font-bold">{deliveries.length}</p>
         </div>
 
         <div className="rounded-xl border bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Waiting</p>
           <p className="mt-2 text-3xl font-bold text-yellow-600">
-            {
-              deliveries.filter((d) => d.status === "waiting")
-                .length
-            }
+            {deliveries.filter((d) => d.status === "waiting").length}
           </p>
         </div>
 
         <div className="rounded-xl border bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Completed</p>
           <p className="mt-2 text-3xl font-bold text-green-600">
-            {
-              deliveries.filter((d) => d.status === "done")
-                .length
-            }
+            {deliveries.filter((d) => d.status === "done").length}
           </p>
         </div>
 
         <div className="rounded-xl border bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Total Quantity</p>
-          <p className="mt-2 text-3xl font-bold">
-            {totalQuantity}
-          </p>
+          <p className="mt-2 text-3xl font-bold">{totalQuantity}</p>
         </div>
       </div>
 
@@ -378,9 +358,7 @@ function Deliveries() {
 
           <select
             value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value)
-            }
+            onChange={(e) => setStatusFilter(e.target.value)}
             className="rounded-lg border px-4 py-3"
           >
             <option value="all">All Status</option>
@@ -421,44 +399,31 @@ function Deliveries() {
             <tbody className="divide-y">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan="8"
-                    className="p-10 text-center text-slate-500"
-                  >
+                  <td colSpan="8" className="p-10 text-center text-slate-500">
                     Loading deliveries...
                   </td>
                 </tr>
               ) : filteredDeliveries.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan="8"
-                    className="p-10 text-center text-slate-500"
-                  >
+                  <td colSpan="8" className="p-10 text-center text-slate-500">
                     No deliveries found.
                   </td>
                 </tr>
               ) : (
                 filteredDeliveries.map((delivery) => {
-                  const quantity = (
-                    delivery.delivery_items || []
-                  ).reduce(
-                    (sum, item) =>
-                      sum + Number(item.quantity || 0),
-                    0
+                  const quantity = (delivery.delivery_items || []).reduce(
+                    (sum, item) => sum + Number(item.quantity || 0),
+                    0,
                   );
 
                   return (
-                    <tr
-                      key={delivery.id}
-                      className="hover:bg-slate-50"
-                    >
+                    <tr key={delivery.id} className="hover:bg-slate-50">
                       <td className="px-5 py-4 font-semibold text-blue-600">
                         {delivery.delivery_number}
                       </td>
 
                       <td className="px-5 py-4">
-                        {delivery.customers?.name ||
-                          "No customer"}
+                        {delivery.customers?.name || "No customer"}
                       </td>
 
                       <td className="px-5 py-4">
@@ -467,34 +432,26 @@ function Deliveries() {
 
                       <td className="px-5 py-4">
                         {delivery.scheduled_date ||
-                          new Date(
-                            delivery.created_at
-                          ).toLocaleDateString()}
+                          new Date(delivery.created_at).toLocaleDateString()}
                       </td>
 
                       <td className="px-5 py-4">
                         {delivery.delivery_items?.length || 0}
                       </td>
 
-                      <td className="px-5 py-4 font-medium">
-                        {quantity}
-                      </td>
+                      <td className="px-5 py-4 font-medium">{quantity}</td>
 
                       <td className="px-5 py-4">
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                            statusStyles[delivery.status] ||
-                            "bg-slate-100"
+                            statusStyles[delivery.status] || "bg-slate-100"
                           }`}
                         >
-                          {statusLabels[delivery.status] ||
-                            delivery.status}
+                          {statusLabels[delivery.status] || delivery.status}
                         </span>
                       </td>
 
-                      <td className="px-5 py-4">
-                        {getAction(delivery)}
-                      </td>
+                      <td className="px-5 py-4">{getAction(delivery)}</td>
                     </tr>
                   );
                 })
@@ -510,9 +467,7 @@ function Deliveries() {
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b p-6">
               <div>
-                <h2 className="text-xl font-bold">
-                  New Delivery
-                </h2>
+                <h2 className="text-xl font-bold">New Delivery</h2>
                 <p className="text-sm text-slate-500">
                   Create an outgoing stock delivery.
                 </p>
@@ -526,10 +481,7 @@ function Deliveries() {
               </button>
             </div>
 
-            <form
-              onSubmit={handleCreateDelivery}
-              className="space-y-5 p-6"
-            >
+            <form onSubmit={handleCreateDelivery} className="space-y-5 p-6">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Input
                   label="Delivery Number *"
@@ -556,10 +508,7 @@ function Deliveries() {
                 >
                   <option value="">Select Customer</option>
                   {customers.map((customer) => (
-                    <option
-                      key={customer.id}
-                      value={customer.id}
-                    >
+                    <option key={customer.id} value={customer.id}>
                       {customer.name}
                     </option>
                   ))}
@@ -574,14 +523,9 @@ function Deliveries() {
                 >
                   <option value="">Select Warehouse</option>
                   {warehouses.map((warehouse) => (
-                    <option
-                      key={warehouse.id}
-                      value={warehouse.id}
-                    >
+                    <option key={warehouse.id} value={warehouse.id}>
                       {warehouse.name}
-                      {warehouse.code
-                        ? ` (${warehouse.code})`
-                        : ""}
+                      {warehouse.code ? ` (${warehouse.code})` : ""}
                     </option>
                   ))}
                 </Select>
@@ -601,56 +545,83 @@ function Deliveries() {
                   </option>
 
                   {locations.map((location) => (
-                    <option
-                      key={location.id}
-                      value={location.id}
-                    >
+                    <option key={location.id} value={location.id}>
                       {location.name}
-                      {location.code
-                        ? ` (${location.code})`
-                        : ""}
+                      {location.code ? ` (${location.code})` : ""}
                     </option>
                   ))}
                 </Select>
+              </div>
 
-                <Select
-                  label="Product *"
-                  name="productId"
-                  value={form.productId}
-                  onChange={handleFormChange}
-                  required
-                >
-                  <option value="">Select Product</option>
-
-                  {products.map((product) => (
-                    <option
-                      key={product.id}
-                      value={product.id}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-700">
+                    Products
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setItems((current) => [
+                        ...current,
+                        { productId: "", quantity: "" },
+                      ])
+                    }
+                    className="text-sm font-semibold text-blue-700"
+                  >
+                    Add product
+                  </button>
+                </div>
+                {items.map((item, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_180px_auto]"
+                  >
+                    <select
+                      value={item.productId}
+                      onChange={(event) =>
+                        handleItemChange(index, "productId", event.target.value)
+                      }
+                      required
+                      className="w-full rounded-lg border px-4 py-3 outline-none focus:border-blue-500"
                     >
-                      {product.name}
-                      {product.sku
-                        ? ` (${product.sku})`
-                        : ""}
-                    </option>
-                  ))}
-                </Select>
-
-                <Input
-                  label="Quantity *"
-                  type="number"
-                  min="0.001"
-                  step="0.001"
-                  name="quantity"
-                  value={form.quantity}
-                  onChange={handleFormChange}
-                  required
-                />
+                      <option value="">Select Product</option>
+                      {products.map((product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} ({product.sku})
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      min="0.001"
+                      step="0.001"
+                      value={item.quantity}
+                      onChange={(event) =>
+                        handleItemChange(index, "quantity", event.target.value)
+                      }
+                      required
+                      placeholder="Quantity"
+                      className="w-full rounded-lg border px-4 py-3 outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setItems((current) =>
+                          current.filter((_, itemIndex) => itemIndex !== index),
+                        )
+                      }
+                      disabled={items.length === 1}
+                      aria-label="Remove product"
+                      className="rounded-md border px-3 text-slate-600 disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium">
-                  Notes
-                </label>
+                <label className="mb-2 block text-sm font-medium">Notes</label>
 
                 <textarea
                   name="notes"
@@ -675,9 +646,7 @@ function Deliveries() {
                   disabled={saving}
                   className="rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                 >
-                  {saving
-                    ? "Creating..."
-                    : "Create Delivery"}
+                  {saving ? "Creating..." : "Create Delivery"}
                 </button>
               </div>
             </form>
@@ -691,9 +660,7 @@ function Deliveries() {
 function Input({ label, ...props }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium">
-        {label}
-      </label>
+      <label className="mb-2 block text-sm font-medium">{label}</label>
       <input
         {...props}
         className="w-full rounded-lg border px-4 py-3 outline-none focus:border-blue-500"
@@ -705,9 +672,7 @@ function Input({ label, ...props }) {
 function Select({ label, children, ...props }) {
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium">
-        {label}
-      </label>
+      <label className="mb-2 block text-sm font-medium">{label}</label>
       <select
         {...props}
         className="w-full rounded-lg border px-4 py-3 outline-none focus:border-blue-500 disabled:bg-slate-100"

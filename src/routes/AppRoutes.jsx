@@ -6,6 +6,7 @@ import AppLayout from "../components/layout/AppLayout";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
 
 import Dashboard from "../pages/Dashboard";
 import Products from "../pages/Products";
@@ -92,6 +93,8 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* ================= PROTECTED ROUTES ================= */}
 
