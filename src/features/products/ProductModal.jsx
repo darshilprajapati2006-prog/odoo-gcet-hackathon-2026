@@ -6,6 +6,7 @@ function ProductModal({
   onSave,
   editingProduct,
   products,
+  categories,
 }) {
   if (!isOpen) {
     return null;
@@ -13,23 +14,16 @@ function ProductModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b px-6 py-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {editingProduct ? "Edit Product" : "Create Product"}
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-              {editingProduct
-                ? "Update product information"
-                : "Add a new product"}
-            </p>
-          </div>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {editingProduct ? "Edit Product" : "Create Product"}
+          </h2>
 
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-2xl leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="text-2xl text-gray-400 hover:text-gray-600"
           >
             ×
           </button>
@@ -41,6 +35,7 @@ function ProductModal({
             onClose={onClose}
             editingProduct={editingProduct}
             products={products}
+            categories={categories}
           />
         </div>
       </div>

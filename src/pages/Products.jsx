@@ -4,6 +4,7 @@ import ProductTable from "../features/products/ProductTable";
 import ProductModal from "../features/products/ProductModal";
 import {
   getProducts,
+  getCategories,
   createProduct,
   updateProduct,
   deactivateProduct,
@@ -11,6 +12,8 @@ import {
 
 function Products() {
   const [products, setProducts] = useState([]);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [stockStatus, setStockStatus] = useState("All");
@@ -29,17 +32,24 @@ function Products() {
 
       const data = await getProducts();
 
-      const formattedProducts = data.map((product) => ({
-        id: product.id,
-        name: product.name,
-        sku: product.sku,
-        category: product.category_id || "Uncategorized",
-        category_id: product.category_id,
-        unit: product.unit_of_measure,
-        stock: Number(product.initial_stock || 0),
-        reorderLevel: Number(product.reorder_level || 0),
-        isActive: product.is_active,
-      }));
+      const formattedProducts = data.map((product) => {
+        const categoryData = categoryOptions.find(
+          (item) => item.id === product.category_id
+        );
+
+        return {
+          id: product.id,
+          name: product.name,
+          sku: product.sku,
+          category:
+            categoryData?.name || product.category_id || "Uncategorized",
+          category_id: product.category_id,
+          unit: product.unit_of_measure,
+          stock: Number(product.initial_stock || 0),
+          reorderLevel: Number(product.reorder_level || 0),
+          isActive: product.is_active,
+        };
+      });
 
       setProducts(formattedProducts);
     } catch (err) {
@@ -50,33 +60,38 @@ function Products() {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const data = await getCategories();
+      setCategoryOptions(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Failed to load categories.");
+    }
+  };
+
   useEffect(() => {
-    loadProducts();
+    loadCategories();
   }, []);
 
+  useEffect(() => {
+    if (categoryOptions.length > 0) {
+      loadProducts();
+    }
+  }, [categoryOptions]);
+
   const getStockStatus = (product) => {
-    if (product.stock <= 0) {
-      return "Out of Stock";
-    }
-
-    if (product.stock <= product.reorderLevel) {
-      return "Low Stock";
-    }
-
+    if (product.stock <= 0) return "Out of Stock";
+    if (product.stock <= product.reorderLevel) return "Low Stock";
     return "In Stock";
   };
 
   const categories = useMemo(() => {
-    const uniqueCategories = [
-      ...new Set(
-        products
-          .map((product) => product.category)
-          .filter(Boolean)
-      ),
+    return [
+      "All",
+      ...categoryOptions.map((item) => item.name),
     ];
-
-    return ["All", ...uniqueCategories];
-  }, [products]);
+  }, [categoryOptions]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -92,8 +107,7 @@ function Products() {
       const currentStockStatus = getStockStatus(product);
 
       const matchesStockStatus =
-        stockStatus === "All" ||
-        currentStockStatus === stockStatus;
+        stockStatus === "All" || currentStockStatus === stockStatus;
 
       const matchesProductStatus =
         productStatus === "All" ||
@@ -174,15 +188,11 @@ function Products() {
       "Are you sure you want to deactivate this product?"
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       setError("");
-
       await deactivateProduct(productId);
-
       await loadProducts();
     } catch (err) {
       console.error(err);
@@ -222,7 +232,6 @@ function Products() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
-
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
@@ -249,11 +258,8 @@ function Products() {
         )}
 
         <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">
-              Total Products
-            </p>
+            <p className="text-sm text-gray-500">Total Products</p>
 
             <p className="mt-1 text-2xl font-bold text-gray-900">
               {totalProducts}
@@ -261,9 +267,7 @@ function Products() {
           </div>
 
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">
-              Active Products
-            </p>
+            <p className="text-sm text-gray-500">Active Products</p>
 
             <p className="mt-1 text-2xl font-bold text-green-600">
               {activeProducts}
@@ -271,9 +275,7 @@ function Products() {
           </div>
 
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">
-              Low Stock
-            </p>
+            <p className="text-sm text-gray-500">Low Stock</p>
 
             <p className="mt-1 text-2xl font-bold text-yellow-600">
               {lowStockProducts}
@@ -281,15 +283,12 @@ function Products() {
           </div>
 
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">
-              Out of Stock
-            </p>
+            <p className="text-sm text-gray-500">Out of Stock</p>
 
             <p className="mt-1 text-2xl font-bold text-red-600">
               {outOfStockProducts}
             </p>
           </div>
-
         </div>
 
         <ProductFilters
@@ -325,6 +324,7 @@ function Products() {
         onSave={handleSaveProduct}
         editingProduct={editingProduct}
         products={products}
+        categories={categoryOptions}
       />
     </div>
   );

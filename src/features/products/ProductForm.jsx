@@ -5,11 +5,12 @@ function ProductForm({
   onClose,
   editingProduct,
   products,
+  categories,
 }) {
   const [formData, setFormData] = useState({
     name: "",
     sku: "",
-    category: "",
+    category_id: "",
     unit: "",
     stock: "",
     reorderLevel: "",
@@ -20,18 +21,18 @@ function ProductForm({
   useEffect(() => {
     if (editingProduct) {
       setFormData({
-        name: editingProduct.name,
-        sku: editingProduct.sku,
-        category: editingProduct.category,
-        unit: editingProduct.unit,
-        stock: editingProduct.stock,
-        reorderLevel: editingProduct.reorderLevel,
+        name: editingProduct.name || "",
+        sku: editingProduct.sku || "",
+        category_id: editingProduct.category_id || "",
+        unit: editingProduct.unit || "",
+        stock: editingProduct.stock ?? "",
+        reorderLevel: editingProduct.reorderLevel ?? "",
       });
     } else {
       setFormData({
         name: "",
         sku: "",
-        category: "",
+        category_id: "",
         unit: "",
         stock: "",
         reorderLevel: "",
@@ -60,7 +61,6 @@ function ProductForm({
 
     const name = formData.name.trim();
     const sku = formData.sku.trim();
-    const category = formData.category.trim();
     const unit = formData.unit.trim();
 
     if (!name) {
@@ -71,8 +71,8 @@ function ProductForm({
       newErrors.sku = "SKU/Code is required.";
     }
 
-    if (!category) {
-      newErrors.category = "Category is required.";
+    if (!formData.category_id) {
+      newErrors.category_id = "Category is required.";
     }
 
     if (!unit) {
@@ -116,7 +116,7 @@ function ProductForm({
     onSave({
       name: formData.name.trim(),
       sku: formData.sku.trim(),
-      category: formData.category.trim(),
+      category_id: formData.category_id,
       unit: formData.unit.trim(),
       stock: Number(formData.stock),
       reorderLevel: Number(formData.reorderLevel),
@@ -173,20 +173,26 @@ function ProductForm({
             Category *
           </label>
 
-          <input
-            type="text"
-            name="category"
-            value={formData.category}
+          <select
+            name="category_id"
+            value={formData.category_id}
             onChange={handleChange}
-            placeholder="e.g. Raw Material"
-            className={`w-full rounded-lg border px-3 py-2.5 outline-none focus:border-blue-500 ${
-              errors.category ? "border-red-500" : "border-gray-300"
+            className={`w-full rounded-lg border bg-white px-3 py-2.5 outline-none focus:border-blue-500 ${
+              errors.category_id ? "border-red-500" : "border-gray-300"
             }`}
-          />
+          >
+            <option value="">Select Category</option>
 
-          {errors.category && (
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+
+          {errors.category_id && (
             <p className="mt-1 text-sm text-red-500">
-              {errors.category}
+              {errors.category_id}
             </p>
           )}
         </div>

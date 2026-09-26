@@ -49,6 +49,19 @@ export async function getProduct(id) {
   return data;
 }
 
+export async function getCategories() {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name")
+    .order("name", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 export async function createProduct(product) {
   const { data, error } = await supabase
     .from("products")
@@ -74,16 +87,37 @@ export async function createProduct(product) {
 }
 
 export async function updateProduct(id, product) {
+  const updateData = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (product.name !== undefined) {
+    updateData.name = product.name;
+  }
+
+  if (product.sku !== undefined) {
+    updateData.sku = product.sku;
+  }
+
+  if (product.category_id !== undefined) {
+    updateData.category_id = product.category_id;
+  }
+
+  if (product.unit_of_measure !== undefined) {
+    updateData.unit_of_measure = product.unit_of_measure;
+  }
+
+  if (product.reorder_level !== undefined) {
+    updateData.reorder_level = product.reorder_level;
+  }
+
+  if (product.is_active !== undefined) {
+    updateData.is_active = product.is_active;
+  }
+
   const { data, error } = await supabase
     .from("products")
-    .update({
-      name: product.name,
-      sku: product.sku,
-      category_id: product.category_id,
-      unit_of_measure: product.unit_of_measure,
-      reorder_level: product.reorder_level,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", id)
     .select()
     .single();
@@ -96,19 +130,7 @@ export async function updateProduct(id, product) {
 }
 
 export async function deactivateProduct(id) {
-  const { data, error } = await supabase
-    .from("products")
-    .update({
-      is_active: false,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
+  return updateProduct(id, {
+    is_active: false,
+  });
 }
