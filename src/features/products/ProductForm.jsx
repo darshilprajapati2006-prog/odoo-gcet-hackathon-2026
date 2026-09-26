@@ -8,6 +8,9 @@ function ProductForm({
   editingProduct,
   products,
   categories,
+  categoriesLoading,
+  categoriesError,
+  onRetryCategories,
 }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -169,11 +172,25 @@ function ProductForm({
             name="category_id"
             value={formData.category_id}
             onChange={handleChange}
+            disabled={
+              categoriesLoading ||
+              Boolean(categoriesError) ||
+              categories.length === 0
+            }
+            aria-describedby="category-status"
             className={`w-full rounded-lg border bg-white px-3 py-2.5 outline-none focus:border-blue-500 ${
               errors.category_id ? "border-red-500" : "border-gray-300"
             }`}
           >
-            <option value="">Select Category</option>
+            <option value="">
+              {categoriesLoading
+                ? "Loading categories..."
+                : categoriesError
+                  ? "Unable to load categories"
+                  : categories.length === 0
+                    ? "No categories available"
+                    : "Select Category"}
+            </option>
 
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -181,6 +198,25 @@ function ProductForm({
               </option>
             ))}
           </select>
+
+          <div id="category-status" aria-live="polite">
+            {categoriesError ? (
+              <div className="mt-2 flex items-center justify-between gap-3 text-sm text-red-700">
+                <span>{categoriesError}</span>
+                <button
+                  type="button"
+                  onClick={onRetryCategories}
+                  className="shrink-0 font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-900"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : !categoriesLoading && categories.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-500">
+                No categories available. Ask an administrator to add a category.
+              </p>
+            ) : null}
+          </div>
 
           {errors.category_id && (
             <p className="mt-1 text-sm text-red-500">{errors.category_id}</p>

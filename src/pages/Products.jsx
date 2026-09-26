@@ -14,6 +14,8 @@ import {
 function Products() {
   const [products, setProducts] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState("");
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
@@ -63,19 +65,25 @@ function Products() {
     }
   }, [categoryOptions]);
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
+      setCategoriesLoading(true);
+      setCategoriesError("");
       const data = await getCategories();
       setCategoryOptions(data);
     } catch (err) {
-      console.error(err);
-      setError(err.message || "Failed to load categories.");
+      console.error("Category loading error:", err);
+      setCategoriesError(
+        "Unable to load categories. Please refresh and try again.",
+      );
+    } finally {
+      setCategoriesLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [loadCategories]);
 
   useEffect(() => {
     loadProducts();
@@ -336,6 +344,9 @@ function Products() {
         editingProduct={editingProduct}
         products={products}
         categories={categoryOptions}
+        categoriesLoading={categoriesLoading}
+        categoriesError={categoriesError}
+        onRetryCategories={loadCategories}
       />
     </div>
   );

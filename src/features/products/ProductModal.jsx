@@ -8,6 +8,9 @@ function ProductModal({
   editingProduct,
   products,
   categories,
+  categoriesLoading,
+  categoriesError,
+  onRetryCategories,
 }) {
   if (!isOpen) {
     return null;
@@ -52,6 +55,9 @@ function ProductModal({
             editingProduct={editingProduct}
             products={products}
             categories={categories}
+            categoriesLoading={categoriesLoading}
+            categoriesError={categoriesError}
+            onRetryCategories={onRetryCategories}
           />
         </div>
       </div>
