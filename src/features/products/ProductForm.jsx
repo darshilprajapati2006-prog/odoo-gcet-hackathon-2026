@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { LoaderCircle } from "lucide-react";
 
 function ProductForm({
   onSave,
+  saving,
   onClose,
   editingProduct,
   products,
@@ -116,7 +118,7 @@ function ProductForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
           Product Name *
         </label>
 
@@ -137,7 +139,7 @@ function ProductForm({
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-gray-700">
+        <label className="mb-1.5 block text-xs font-semibold text-slate-600">
           SKU / Code *
         </label>
 
@@ -159,7 +161,7 @@ function ProductForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
             Category *
           </label>
 
@@ -186,7 +188,7 @@ function ProductForm({
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
             Unit of Measure *
           </label>
 
@@ -209,7 +211,7 @@ function ProductForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+          <label className="mb-1.5 block text-xs font-semibold text-slate-600">
             Reorder Level
           </label>
 
@@ -235,16 +237,23 @@ function ProductForm({
         <button
           type="button"
           onClick={onClose}
-          className="rounded-lg border border-gray-300 px-5 py-2.5 font-medium text-gray-700 hover:bg-gray-50"
+          disabled={saving}
+          className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
         >
           Cancel
         </button>
 
         <button
           type="submit"
-          className="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white hover:bg-blue-700"
+          disabled={saving}
+          className="inline-flex min-w-36 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {editingProduct ? "Update Product" : "Create Product"}
+          {saving && <LoaderCircle size={16} className="animate-spin" />}
+          {saving
+            ? "Saving..."
+            : editingProduct
+              ? "Save changes"
+              : "Create product"}
         </button>
       </div>
     </form>

@@ -291,13 +291,18 @@ function Deliveries() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Deliveries</h1>
-          <p className="mt-1 text-slate-500">
-            Manage outgoing inventory deliveries.
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-700">
+            Outbound operations
+          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+            Delivery Orders
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage outgoing inventory and fulfillment.
           </p>
         </div>
 
@@ -306,7 +311,7 @@ function Deliveries() {
             setError("");
             setShowForm(true);
           }}
-          className="rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+          className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-800"
         >
           + New Delivery
         </button>
@@ -320,7 +325,7 @@ function Deliveries() {
       )}
 
       {/* Summary */}
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border bg-white p-5 shadow-sm">
           <p className="text-sm text-slate-500">Total Deliveries</p>
           <p className="mt-2 text-3xl font-bold">{deliveries.length}</p>
@@ -347,7 +352,7 @@ function Deliveries() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 rounded-xl border bg-white p-4 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row">
           <input
             value={search}

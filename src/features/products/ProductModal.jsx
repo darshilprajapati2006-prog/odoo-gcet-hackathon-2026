@@ -4,6 +4,7 @@ function ProductModal({
   isOpen,
   onClose,
   onSave,
+  saving,
   editingProduct,
   products,
   categories,
@@ -13,17 +14,31 @@ function ProductModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-modal-title"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-2xl"
+      >
         <div className="flex items-center justify-between border-b px-6 py-4">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {editingProduct ? "Edit Product" : "Create Product"}
-          </h2>
+          <div>
+            <h2
+              id="product-modal-title"
+              className="text-lg font-bold text-slate-900"
+            >
+              {editingProduct ? "Edit product" : "Add a product"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Catalog details and reorder settings.
+            </p>
+          </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="text-2xl text-gray-400 hover:text-gray-600"
+            aria-label="Close product form"
+            className="grid h-9 w-9 place-items-center rounded-lg text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700"
           >
             ×
           </button>
@@ -32,6 +47,7 @@ function ProductModal({
         <div className="p-6">
           <ProductForm
             onSave={onSave}
+            saving={saving}
             onClose={onClose}
             editingProduct={editingProduct}
             products={products}

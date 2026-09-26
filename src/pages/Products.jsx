@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 import ProductFilters from "../features/products/ProductFilters";
 import ProductTable from "../features/products/ProductTable";
 import ProductModal from "../features/products/ProductModal";
@@ -23,7 +24,9 @@ function Products() {
   const [editingProduct, setEditingProduct] = useState(null);
 
   const [loading, setLoading] = useState(true);
+  const [savingProduct, setSavingProduct] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const loadProducts = useCallback(async () => {
     try {
@@ -135,7 +138,9 @@ function Products() {
 
   const handleSaveProduct = async (productData) => {
     try {
+      setSavingProduct(true);
       setError("");
+      setSuccess("");
 
       if (editingProduct) {
         await updateProduct(editingProduct.id, {
@@ -157,6 +162,11 @@ function Products() {
 
       await loadProducts();
       closeModal();
+      setSuccess(
+        editingProduct
+          ? "Product updated successfully."
+          : "Product created successfully.",
+      );
     } catch (err) {
       console.error(err);
 
@@ -168,6 +178,8 @@ function Products() {
       } else {
         setError(err.message || "Failed to save product.");
       }
+    } finally {
+      setSavingProduct(false);
     }
   };
 
@@ -216,97 +228,111 @@ function Products() {
   ).length;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Product Management
-            </h1>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-700">
+            Inventory catalog
+          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+            Products
+          </h1>
 
-            <p className="mt-1 text-sm text-gray-500">
-              Manage products, stock levels and reorder levels
-            </p>
-          </div>
-
-          <button
-            onClick={openCreateModal}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white transition hover:bg-blue-700"
-          >
-            + Add Product
-          </button>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage products, SKUs, stock levels, and reorder thresholds.
+          </p>
         </div>
 
-        {error && (
-          <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">Total Products</p>
-
-            <p className="mt-1 text-2xl font-bold text-gray-900">
-              {totalProducts}
-            </p>
-          </div>
-
-          <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">Active Products</p>
-
-            <p className="mt-1 text-2xl font-bold text-green-600">
-              {activeProducts}
-            </p>
-          </div>
-
-          <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">Low Stock</p>
-
-            <p className="mt-1 text-2xl font-bold text-yellow-600">
-              {lowStockProducts}
-            </p>
-          </div>
-
-          <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm text-gray-500">Out of Stock</p>
-
-            <p className="mt-1 text-2xl font-bold text-red-600">
-              {outOfStockProducts}
-            </p>
-          </div>
-        </div>
-
-        <ProductFilters
-          search={search}
-          setSearch={setSearch}
-          category={category}
-          setCategory={setCategory}
-          stockStatus={stockStatus}
-          setStockStatus={setStockStatus}
-          productStatus={productStatus}
-          setProductStatus={setProductStatus}
-          categories={categories}
-        />
-
-        {loading ? (
-          <div className="rounded-xl border bg-white p-10 text-center text-gray-500 shadow-sm">
-            Loading products...
-          </div>
-        ) : (
-          <ProductTable
-            products={filteredProducts}
-            onEdit={openEditModal}
-            onDeactivate={handleDeactivate}
-            onActivate={handleActivate}
-          />
-        )}
+        <button
+          type="button"
+          onClick={openCreateModal}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800"
+        >
+          <Plus size={17} /> Add Product
+        </button>
       </div>
 
+      {error && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {error}
+        </div>
+      )}
+      {success && (
+        <div
+          role="status"
+          className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800"
+        >
+          {success}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-sm font-medium text-slate-500">Total Products</p>
+
+          <p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+            {totalProducts.toLocaleString()}
+          </p>
+        </div>
+
+        <div className="rounded-xl border bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-sm font-medium text-slate-500">Active Products</p>
+
+          <p className="mt-2 text-3xl font-bold tracking-tight text-emerald-700">
+            {activeProducts}
+          </p>
+        </div>
+
+        <div className="rounded-xl border bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-sm font-medium text-slate-500">Low Stock</p>
+
+          <p className="mt-2 text-3xl font-bold tracking-tight text-amber-700">
+            {lowStockProducts}
+          </p>
+        </div>
+
+        <div className="rounded-xl border bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <p className="text-sm font-medium text-slate-500">Out of Stock</p>
+
+          <p className="mt-2 text-3xl font-bold tracking-tight text-red-700">
+            {outOfStockProducts}
+          </p>
+        </div>
+      </div>
+
+      <ProductFilters
+        search={search}
+        setSearch={setSearch}
+        category={category}
+        setCategory={setCategory}
+        stockStatus={stockStatus}
+        setStockStatus={setStockStatus}
+        productStatus={productStatus}
+        setProductStatus={setProductStatus}
+        categories={categories}
+      />
+
+      {loading ? (
+        <div className="rounded-xl border bg-white p-10 text-center text-sm font-medium text-slate-500 shadow-sm">
+          <span className="mx-auto mb-3 block h-7 w-7 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+          Loading products...
+        </div>
+      ) : (
+        <ProductTable
+          products={filteredProducts}
+          onEdit={openEditModal}
+          onDeactivate={handleDeactivate}
+          onActivate={handleActivate}
+        />
+      )}
       <ProductModal
         isOpen={modalOpen}
         onClose={closeModal}
         onSave={handleSaveProduct}
+        saving={savingProduct}
         editingProduct={editingProduct}
         products={products}
         categories={categoryOptions}

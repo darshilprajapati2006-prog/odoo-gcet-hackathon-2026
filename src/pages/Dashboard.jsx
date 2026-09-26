@@ -6,11 +6,9 @@ import {
   ArrowUpFromLine,
   Boxes,
   CheckCircle2,
-  Clock3,
   Package,
   RefreshCw,
   Search,
-  TrendingDown,
   Warehouse,
 } from "lucide-react";
 
@@ -420,6 +418,60 @@ function Dashboard() {
       .slice(0, 8);
   }, [moveHistory, productMap, warehouseId, categoryId, search, documentType]);
 
+  const dashboardKpis = [
+    {
+      title: "Products in stock",
+      value: totalProductsInStock,
+      detail: "Active products with available stock",
+      icon: Boxes,
+      tone: "blue",
+    },
+    {
+      title: "Low stock items",
+      value: lowStockProducts.length,
+      detail: "At or below their reorder threshold",
+      icon: AlertTriangle,
+      tone: "amber",
+    },
+    {
+      title: "Out of stock",
+      value: outOfStockProducts.length,
+      detail: "Active products with no available stock",
+      icon: Package,
+      tone: "red",
+    },
+    {
+      title: "Pending receipts",
+      value: pendingReceipts,
+      detail: "Waiting or ready to receive",
+      icon: ArrowDownToLine,
+      tone: "emerald",
+    },
+    {
+      title: "Pending deliveries",
+      value: pendingDeliveries,
+      detail: "Waiting or ready to fulfill",
+      icon: ArrowUpFromLine,
+      tone: "cyan",
+    },
+    {
+      title: "Transfers scheduled",
+      value: pendingTransfers,
+      detail: "Waiting or ready to move",
+      icon: ArrowLeftRight,
+      tone: "indigo",
+    },
+  ];
+
+  const kpiToneClasses = {
+    blue: "bg-blue-50 text-blue-700",
+    amber: "bg-amber-50 text-amber-700",
+    red: "bg-red-50 text-red-700",
+    emerald: "bg-emerald-50 text-emerald-700",
+    cyan: "bg-cyan-50 text-cyan-700",
+    indigo: "bg-indigo-50 text-indigo-700",
+  };
+
   const resetFilters = () => {
     setDocumentType("all");
     setStatus("all");
@@ -451,11 +503,11 @@ function Dashboard() {
           </p>
 
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
-            StockSense Dashboard
+            Inventory Dashboard
           </h1>
 
           <p className="mt-1 text-sm text-slate-500">
-            Monitor stock, operations and warehouse activity in real time.
+            Monitor stock, operations, and warehouse activity in real time.
           </p>
         </div>
 
@@ -481,112 +533,27 @@ function Dashboard() {
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-              <Boxes size={22} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {dashboardKpis.map(({ title, value, detail, icon: Icon, tone }) => (
+          <article
+            key={title}
+            className="group rounded-xl border border-slate-200 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="flex items-start justify-between">
+              <div
+                className={`grid h-10 w-10 place-items-center rounded-lg ${kpiToneClasses[tone]}`}
+              >
+                <Icon size={19} />
+              </div>
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-200 transition-colors group-hover:bg-blue-500" />
             </div>
-
-            <TrendingDown size={18} className="text-slate-300" />
-          </div>
-
-          <p className="mt-4 text-sm font-medium text-slate-500">
-            Products in Stock
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-slate-900">
-            {totalProductsInStock}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="rounded-xl bg-amber-50 p-3 text-amber-600">
-              <AlertTriangle size={22} />
-            </div>
-          </div>
-
-          <p className="mt-4 text-sm font-medium text-slate-500">
-            Low Stock Items
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-slate-900">
-            {lowStockProducts.length}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-red-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="rounded-xl bg-red-50 p-3 text-red-600">
-              <Package size={22} />
-            </div>
-          </div>
-
-          <p className="mt-4 text-sm font-medium text-slate-500">
-            Out of Stock
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-slate-900">
-            {outOfStockProducts.length}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
-              <ArrowDownToLine size={22} />
-            </div>
-
-            <Clock3 size={18} className="text-slate-300" />
-          </div>
-
-          <p className="mt-4 text-sm font-medium text-slate-500">
-            Pending Receipts
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-slate-900">
-            {pendingReceipts}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-purple-200 bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="rounded-xl bg-purple-50 p-3 text-purple-600">
-              <ArrowUpFromLine size={22} />
-            </div>
-
-            <Clock3 size={18} className="text-slate-300" />
-          </div>
-
-          <p className="mt-4 text-sm font-medium text-slate-500">
-            Pending Deliveries
-          </p>
-
-          <p className="mt-1 text-3xl font-bold text-slate-900">
-            {pendingDeliveries}
-          </p>
-        </div>
-      </div>
-
-      {/* Internal Transfer KPI */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-            <ArrowLeftRight size={22} />
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-slate-500">
-              Internal Transfers Scheduled
+            <p className="mt-5 text-sm font-semibold text-slate-600">{title}</p>
+            <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+              {value.toLocaleString()}
             </p>
-
-            <p className="text-2xl font-bold text-slate-900">
-              {pendingTransfers}
-            </p>
-          </div>
-        </div>
+            <p className="mt-2 text-xs text-slate-500">{detail}</p>
+          </article>
+        ))}
       </div>
 
       {/* Filters */}

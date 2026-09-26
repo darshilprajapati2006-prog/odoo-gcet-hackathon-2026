@@ -1,19 +1,159 @@
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #111827;
-  background: #f8fafc;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: #172338;
+  background: #f4f7fb;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --ink: #172338;
+  --muted: #69778b;
+  --line: #e4eaf1;
+  --paper: #ffffff;
+  --blue: #315ee8;
+  --nav: #111c2d;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  background: #f4f7fb;
+}
+
 body {
   margin: 0;
-  min-width: 320px;
   min-height: 100vh;
+  color: var(--ink);
+  background-color: #f4f7fb;
+  background-image:
+    linear-gradient(#e9eef5 1px, transparent 1px),
+    linear-gradient(90deg, #e9eef5 1px, transparent 1px);
+  background-size: 36px 36px;
+  background-position: -1px -1px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:not(:disabled),
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgb(49 94 232 / 28%);
+  outline-offset: 2px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9aa6b5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.app-main {
+  background: linear-gradient(
+    135deg,
+    rgb(246 248 252 / 97%),
+    rgb(241 245 250 / 97%)
+  );
+}
+
+.app-main :is(.rounded-xl, .rounded-2xl).border.bg-white {
+  border-color: var(--line);
+  box-shadow: 0 1px 2px rgb(23 35 56 / 4%);
+}
+
+.app-main :is(.rounded-xl, .rounded-2xl).border.bg-white:hover {
+  box-shadow: 0 5px 16px rgb(23 35 56 / 6%);
+}
+
+.app-main table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.app-main table th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  color: #64748b;
+}
+
+.app-main table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.app-main :is(input, select, textarea) {
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.auth-shell {
+  background: #f2f5f9;
+  background-image: linear-gradient(135deg, #f8fafc 0%, #edf2f8 100%);
+}
+
+.auth-panel {
+  background: var(--nav);
+  background-image: linear-gradient(
+    155deg,
+    #192a42 0%,
+    #101b2b 65%,
+    #14253a 100%
+  );
+}
+
+.auth-card {
+  box-shadow: 0 24px 70px rgb(23 35 56 / 12%);
+}
+
+.brand-mark {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 0.75rem;
+  background: rgb(255 255 255 / 8%);
+  color: #9bb7ff;
+}
+
+@media (max-width: 640px) {
+  body {
+    background-size: 26px 26px;
+  }
 }

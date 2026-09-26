@@ -12,7 +12,7 @@ function AppLayout({ children }) {
       <div className="lg:pl-64">
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8">
+        <main className="app-main min-h-[calc(100vh-4rem)] p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>

@@ -191,9 +191,12 @@ export default function Transfers() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-blue-700">
+            Stock movement
+          </p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
             Internal Transfers
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -206,7 +209,7 @@ export default function Transfers() {
             setError("");
             setShowForm(true);
           }}
-          className="rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+          className="rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-800"
         >
           + New Transfer
         </button>

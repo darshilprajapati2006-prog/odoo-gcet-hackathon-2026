@@ -1,41 +1,42 @@
 import ProductStatusBadge from "./ProductStatusBadge";
+import { Pencil, Power } from "lucide-react";
 
 function ProductTable({ products, onEdit, onDeactivate, onActivate }) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[950px]">
-          <thead className="bg-gray-50">
+          <thead className="bg-slate-50">
             <tr className="border-b">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
                 Product Name
               </th>
 
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
                 SKU
               </th>
 
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
                 Category
               </th>
 
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
                 UOM
               </th>
 
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-500">
                 Total Stock
               </th>
 
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-500">
                 Reorder Level
               </th>
 
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
                 Stock Status
               </th>
 
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
                 Actions
               </th>
             </tr>
@@ -55,12 +56,12 @@ function ProductTable({ products, onEdit, onDeactivate, onActivate }) {
               products.map((product) => (
                 <tr
                   key={product.id}
-                  className={`border-b last:border-b-0 hover:bg-gray-50 ${
+                  className={`border-b border-slate-100 last:border-b-0 hover:bg-slate-50 ${
                     !product.isActive ? "opacity-60" : ""
                   }`}
                 >
                   <td className="px-4 py-4">
-                    <div className="font-medium text-gray-900">
+                    <div className="font-semibold text-slate-900">
                       {product.name}
                     </div>
 
@@ -71,23 +72,23 @@ function ProductTable({ products, onEdit, onDeactivate, onActivate }) {
                     )}
                   </td>
 
-                  <td className="px-4 py-4 text-sm text-gray-700">
+                  <td className="px-4 py-4 text-sm text-slate-600">
                     {product.sku}
                   </td>
 
-                  <td className="px-4 py-4 text-sm text-gray-700">
+                  <td className="px-4 py-4 text-sm text-slate-600">
                     {product.category}
                   </td>
 
-                  <td className="px-4 py-4 text-sm text-gray-700">
+                  <td className="px-4 py-4 text-sm text-slate-600">
                     {product.unit}
                   </td>
 
-                  <td className="px-4 py-4 text-right text-sm font-medium text-gray-900">
+                  <td className="px-4 py-4 text-right text-sm font-semibold tabular-nums text-slate-900">
                     {product.stock}
                   </td>
 
-                  <td className="px-4 py-4 text-right text-sm text-gray-700">
+                  <td className="px-4 py-4 text-right text-sm tabular-nums text-slate-600">
                     {product.reorderLevel}
                   </td>
 
@@ -101,25 +102,34 @@ function ProductTable({ products, onEdit, onDeactivate, onActivate }) {
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       <button
+                        type="button"
+                        title="Edit product"
+                        aria-label={`Edit ${product.name}`}
                         onClick={() => onEdit(product)}
-                        className="rounded-md border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                       >
-                        Edit
+                        <Pencil size={14} /> Edit
                       </button>
 
                       {product.isActive ? (
                         <button
+                          type="button"
+                          title="Deactivate product"
+                          aria-label={`Deactivate ${product.name}`}
                           onClick={() => onDeactivate(product.id)}
-                          className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
                         >
-                          Deactivate
+                          <Power size={14} /> Deactivate
                         </button>
                       ) : (
                         <button
+                          type="button"
+                          title="Activate product"
+                          aria-label={`Activate ${product.name}`}
                           onClick={() => onActivate(product.id)}
-                          className="rounded-md border border-green-200 px-3 py-1.5 text-sm font-medium text-green-600 hover:bg-green-50"
+                          className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
                         >
-                          Activate
+                          <Power size={14} /> Activate
                         </button>
                       )}
                     </div>
@@ -131,7 +141,7 @@ function ProductTable({ products, onEdit, onDeactivate, onActivate }) {
         </table>
       </div>
 
-      <div className="border-t bg-gray-50 px-4 py-3 text-sm text-gray-500">
+      <div className="border-t border-slate-100 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-500">
         Showing {products.length} product{products.length !== 1 ? "s" : ""}
       </div>
     </div>
