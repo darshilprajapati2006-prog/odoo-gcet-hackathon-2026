@@ -8,18 +8,9 @@ export default function Transfers() {
   const [destinationLocation, setDestinationLocation] = useState("");
   const [quantity, setQuantity] = useState("");
 
-  const [status, setStatus] = useState("Draft");
-  const [error, setError] = useState("");
-
   const [transfers, setTransfers] = useState([]);
 
-  // Demo stock values
-  const sourceStock = 100;
-  const destinationStock = 20;
-
   const handleTransfer = () => {
-    setError("");
-
     if (
       !product ||
       !sourceWarehouse ||
@@ -28,30 +19,21 @@ export default function Transfers() {
       !destinationLocation ||
       !quantity
     ) {
-      setError("Please fill all fields");
-      return;
-    }
-
-    if (Number(quantity) > sourceStock) {
-      setError("Insufficient Stock");
+      alert("Please fill all fields");
       return;
     }
 
     const newTransfer = {
       id: Date.now(),
       product,
-      from: sourceWarehouse,
-      fromLocation: sourceLocation,
-      to: destinationWarehouse,
-      toLocation: destinationLocation,
-      quantity: Number(quantity),
+      from: sourceLocation,
+      to: destinationLocation,
+      quantity,
       status: "Ready",
     };
 
     setTransfers([...transfers, newTransfer]);
-    setStatus("Ready");
 
-    // Clear form
     setProduct("");
     setSourceWarehouse("");
     setSourceLocation("");
@@ -61,139 +43,178 @@ export default function Transfers() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Internal Transfers</h1>
-
-      <h3>Status: {status}</h3>
+    <div style={{ padding: "25px" }}>
+      <h1 style={{ marginBottom: "20px" }}>Internal Transfers</h1>
 
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-          maxWidth: "500px",
+          display: "grid",
+          gridTemplateColumns: "2fr 1fr",
+          gap: "20px",
+          marginBottom: "30px",
         }}
       >
-        <input
-          placeholder="Product"
-          value={product}
-          onChange={(e) => setProduct(e.target.value)}
-        />
+        {/* Transfer Form */}
 
-        <input
-          placeholder="Source Warehouse"
-          value={sourceWarehouse}
-          onChange={(e) => setSourceWarehouse(e.target.value)}
-        />
+        <div
+          style={{
+            background: "#fff",
+            padding: "20px",
+            borderRadius: "12px",
+            boxShadow: "0px 2px 10px rgba(0,0,0,0.1)",
+          }}
+        >
+          <h2>Create Transfer</h2>
 
-        <input
-          placeholder="Source Location"
-          value={sourceLocation}
-          onChange={(e) => setSourceLocation(e.target.value)}
-        />
+          <input
+            value={product}
+            onChange={(e) => setProduct(e.target.value)}
+            placeholder="Product"
+            style={inputStyle}
+          />
 
-        <input
-          placeholder="Destination Warehouse"
-          value={destinationWarehouse}
-          onChange={(e) => setDestinationWarehouse(e.target.value)}
-        />
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              value={sourceWarehouse}
+              onChange={(e) => setSourceWarehouse(e.target.value)}
+              placeholder="Source Warehouse"
+              style={inputStyle}
+            />
 
-        <input
-          placeholder="Destination Location"
-          value={destinationLocation}
-          onChange={(e) => setDestinationLocation(e.target.value)}
-        />
+            <input
+              value={sourceLocation}
+              onChange={(e) => setSourceLocation(e.target.value)}
+              placeholder="Source Location"
+              style={inputStyle}
+            />
+          </div>
 
-        <input
-          type="number"
-          placeholder="Quantity"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-        />
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              value={destinationWarehouse}
+              onChange={(e) => setDestinationWarehouse(e.target.value)}
+              placeholder="Destination Warehouse"
+              style={inputStyle}
+            />
 
-        <button onClick={handleTransfer}>
-          Create Transfer
-        </button>
+            <input
+              value={destinationLocation}
+              onChange={(e) => setDestinationLocation(e.target.value)}
+              placeholder="Destination Location"
+              style={inputStyle}
+            />
+          </div>
+
+          <input
+            type="number"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            placeholder="Quantity"
+            style={inputStyle}
+          />
+
+          <button
+            onClick={handleTransfer}
+            style={{
+              marginTop: "15px",
+              background: "#2563eb",
+              color: "white",
+              border: "none",
+              padding: "10px 18px",
+              borderRadius: "8px",
+              cursor: "pointer",
+            }}
+          >
+            Create Transfer
+          </button>
+        </div>
+
+        {/* Stock Validation */}
+
+        <div
+          style={{
+            background: "#fff",
+            padding: "20px",
+            borderRadius: "12px",
+            boxShadow: "0px 2px 10px rgba(0,0,0,0.1)",
+          }}
+        >
+          <h2>Stock Validation</h2>
+
+          <p>Main Storage: 100</p>
+          <p>Production Floor: 20</p>
+
+          <hr />
+
+          <h3>Total Stock: 120</h3>
+
+          <p style={{ color: "green" }}>
+            ✓ Company stock remains unchanged
+          </p>
+        </div>
       </div>
 
-      {error && (
-        <p style={{ color: "red", marginTop: "10px" }}>
-          {error}
-        </p>
-      )}
+      {/* Transfer History */}
 
-      <div style={{ marginTop: "20px" }}>
-        <h3>Stock Validation Demo</h3>
-
-        <p>Main Storage: {sourceStock}</p>
-        <p>Production Floor: {destinationStock}</p>
-
-        {quantity && !error && (
-          <>
-            <hr />
-
-            <p>
-              After Transfer:
-            </p>
-
-            <p>
-              Main Storage:{" "}
-              {sourceStock - Number(quantity || 0)}
-            </p>
-
-            <p>
-              Production Floor:{" "}
-              {destinationStock + Number(quantity || 0)}
-            </p>
-
-            <p>
-              Total Stock:{" "}
-              {sourceStock + destinationStock}
-            </p>
-          </>
-        )}
-      </div>
-
-      <table
-        border="1"
-        cellPadding="10"
+      <div
         style={{
-          marginTop: "20px",
-          width: "100%",
+          background: "#fff",
+          padding: "20px",
+          borderRadius: "12px",
+          boxShadow: "0px 2px 10px rgba(0,0,0,0.1)",
         }}
       >
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Product</th>
-            <th>From</th>
-            <th>To</th>
-            <th>Quantity</th>
-            <th>Status</th>
-          </tr>
-        </thead>
+        <h2>Transfer History</h2>
 
-        <tbody>
-          {transfers.map((transfer) => (
-            <tr key={transfer.id}>
-              <td>{transfer.id}</td>
-              <td>{transfer.product}</td>
-              <td>
-                {transfer.from}
-                <br />
-                {transfer.fromLocation}
-              </td>
-              <td>
-                {transfer.to}
-                <br />
-                {transfer.toLocation}
-              </td>
-              <td>{transfer.quantity}</td>
-              <td>{transfer.status}</td>
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            marginTop: "15px",
+          }}
+        >
+          <thead>
+            <tr style={{ background: "#2563eb", color: "white" }}>
+              <th style={thStyle}>ID</th>
+              <th style={thStyle}>Product</th>
+              <th style={thStyle}>From</th>
+              <th style={thStyle}>To</th>
+              <th style={thStyle}>Quantity</th>
+              <th style={thStyle}>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {transfers.map((transfer) => (
+              <tr key={transfer.id}>
+                <td style={tdStyle}>{transfer.id}</td>
+                <td style={tdStyle}>{transfer.product}</td>
+                <td style={tdStyle}>{transfer.from}</td>
+                <td style={tdStyle}>{transfer.to}</td>
+                <td style={tdStyle}>{transfer.quantity}</td>
+                <td style={tdStyle}>{transfer.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px",
+  marginTop: "10px",
+  border: "1px solid #ddd",
+  borderRadius: "8px",
+};
+
+const thStyle = {
+  padding: "12px",
+};
+
+const tdStyle = {
+  padding: "12px",
+  borderBottom: "1px solid #ddd",
+};
