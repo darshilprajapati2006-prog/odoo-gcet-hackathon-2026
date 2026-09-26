@@ -1,69 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function MoveHistory() {
   const [search, setSearch] = useState("");
   const [movementType, setMovementType] = useState("");
+  const [movements, setMovements] = useState([]);
 
-  const movements = [
-    {
-      id: 1,
-      date: "2026-09-26",
-      product: "Steel Rod",
-      type: "RECEIPT",
-      quantity: 100,
-      warehouse: "Main Warehouse",
-      location: "Main Storage",
-      reference: "RCPT-001",
-      user: "Admin",
-    },
-    {
-      id: 2,
-      date: "2026-09-26",
-      product: "Steel Rod",
-      type: "TRANSFER_OUT",
-      quantity: -30,
-      warehouse: "Main Warehouse",
-      location: "Main Storage",
-      reference: "TRF-001",
-      user: "Admin",
-    },
-    {
-      id: 3,
-      date: "2026-09-26",
-      product: "Steel Rod",
-      type: "TRANSFER_IN",
-      quantity: 30,
-      warehouse: "Main Warehouse",
-      location: "Production Floor",
-      reference: "TRF-001",
-      user: "Admin",
-    },
-    {
-      id: 4,
-      date: "2026-09-26",
-      product: "Steel Rod",
-      type: "ADJUSTMENT",
-      quantity: -3,
-      warehouse: "Main Warehouse",
-      location: "Production Floor",
-      reference: "ADJ-001",
-      user: "Admin",
-    },
-    {
-      id: 5,
-      date: "2026-09-26",
-      product: "Steel Rod",
-      type: "DELIVERY",
-      quantity: -10,
-      warehouse: "Main Warehouse",
-      location: "Dispatch Area",
-      reference: "DEL-001",
-      user: "Admin",
-    },
-  ];
+  useEffect(() => {
+    const saved =
+      JSON.parse(localStorage.getItem("moveHistory")) || [];
+
+    setMovements(saved);
+  }, []);
 
   const filteredMovements = movements.filter((m) => {
-    const productMatch = m.product
+    const productMatch = (m.product || "")
       .toLowerCase()
       .includes(search.toLowerCase());
 
@@ -83,38 +33,97 @@ export default function MoveHistory() {
       .reduce((sum, m) => sum + m.quantity, 0)
   );
 
+  const getBadgeStyle = (type) => {
+    switch (type) {
+      case "TRANSFER_IN":
+        return {
+          background: "#dcfce7",
+          color: "#166534",
+        };
+
+      case "TRANSFER_OUT":
+        return {
+          background: "#fee2e2",
+          color: "#991b1b",
+        };
+
+      case "ADJUSTMENT":
+        return {
+          background: "#fef3c7",
+          color: "#92400e",
+        };
+
+      case "RECEIPT":
+        return {
+          background: "#dbeafe",
+          color: "#1e40af",
+        };
+
+      case "DELIVERY":
+        return {
+          background: "#ede9fe",
+          color: "#5b21b6",
+        };
+
+      default:
+        return {
+          background: "#f3f4f6",
+          color: "#374151",
+        };
+    }
+  };
+
   return (
-    <div style={{ padding: "30px" }}>
-      <h2 style={{ marginBottom: "25px" }}>
+    <div
+      style={{
+        padding: "30px",
+        background: "#f4f7fc",
+        minHeight: "100vh",
+      }}
+    >
+      <h2
+        style={{
+          marginBottom: "25px",
+          color: "#1f2937",
+        }}
+      >
         Stock Move History
       </h2>
 
-      {/* SUMMARY CARDS */}
+      {/* SUMMARY */}
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(220px,1fr))",
           gap: "20px",
           marginBottom: "25px",
         }}
       >
         <div style={cardStyle}>
-          <h3>Total Movements</h3>
+          <h4>Total Movements</h4>
           <h1>{movements.length}</h1>
         </div>
 
         <div style={cardStyle}>
-          <h3>Total Stock In</h3>
+          <h4>Total Stock In</h4>
           <h1 style={{ color: "green" }}>
             +{totalIn}
           </h1>
         </div>
 
         <div style={cardStyle}>
-          <h3>Total Stock Out</h3>
+          <h4>Total Stock Out</h4>
           <h1 style={{ color: "red" }}>
             -{totalOut}
+          </h1>
+        </div>
+
+        <div style={cardStyle}>
+          <h4>Net Movement</h4>
+          <h1>
+            {totalIn - totalOut}
           </h1>
         </div>
       </div>
@@ -154,14 +163,6 @@ export default function MoveHistory() {
               All Movement Types
             </option>
 
-            <option value="RECEIPT">
-              RECEIPT
-            </option>
-
-            <option value="DELIVERY">
-              DELIVERY
-            </option>
-
             <option value="TRANSFER_IN">
               TRANSFER_IN
             </option>
@@ -173,8 +174,59 @@ export default function MoveHistory() {
             <option value="ADJUSTMENT">
               ADJUSTMENT
             </option>
+
+            <option value="RECEIPT">
+              RECEIPT
+            </option>
+
+            <option value="DELIVERY">
+              DELIVERY
+            </option>
           </select>
         </div>
+      </div>
+
+      {/* RECENT ACTIVITY */}
+
+      <div
+        style={{
+          ...cardStyle,
+          marginTop: "20px",
+        }}
+      >
+        <h3>Recent Activity</h3>
+
+        {movements.slice(0, 5).map((item) => (
+          <div
+            key={item.id}
+            style={{
+              padding: "10px 0",
+              borderBottom: "1px solid #eee",
+            }}
+          >
+            <strong>{item.type}</strong>
+
+            <div>{item.product}</div>
+
+            <div
+              style={{
+                color:
+                  item.quantity > 0
+                    ? "green"
+                    : "red",
+                fontWeight: "bold",
+              }}
+            >
+              {item.quantity > 0
+                ? `+${item.quantity}`
+                : item.quantity}
+            </div>
+          </div>
+        ))}
+
+        {movements.length === 0 && (
+          <p>No recent activity.</p>
+        )}
       </div>
 
       {/* TABLE */}
@@ -216,7 +268,9 @@ export default function MoveHistory() {
           <tbody>
             {filteredMovements.map((move) => (
               <tr key={move.id}>
-                <td style={tdStyle}>{move.date}</td>
+                <td style={tdStyle}>
+                  {move.date}
+                </td>
 
                 <td style={tdStyle}>
                   {move.product}
@@ -225,12 +279,11 @@ export default function MoveHistory() {
                 <td style={tdStyle}>
                   <span
                     style={{
-                      padding:
-                        "6px 12px",
-                      borderRadius:
-                        "20px",
-                      background:
-                        "#eef2ff",
+                      ...getBadgeStyle(move.type),
+                      padding: "6px 12px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: "bold",
                     }}
                   >
                     {move.type}
@@ -244,8 +297,7 @@ export default function MoveHistory() {
                         move.quantity > 0
                           ? "green"
                           : "red",
-                      fontWeight:
-                        "bold",
+                      fontWeight: "bold",
                     }}
                   >
                     {move.quantity > 0
