@@ -1,6 +1,9 @@
 import { useState } from "react";
 
 export default function Transfers() {
+  const sourceStock = 100;
+  const destinationStock = 20;
+
   const [product, setProduct] = useState("");
   const [sourceWarehouse, setSourceWarehouse] = useState("");
   const [sourceLocation, setSourceLocation] = useState("");
@@ -11,28 +14,39 @@ export default function Transfers() {
   const [transfers, setTransfers] = useState([]);
 
   const handleTransfer = () => {
+    const qty = Number(quantity);
+
     if (
       !product ||
       !sourceWarehouse ||
       !sourceLocation ||
       !destinationWarehouse ||
       !destinationLocation ||
-      !quantity
+      !qty
     ) {
-      alert("Please fill all fields");
+      alert("Fill all fields");
+      return;
+    }
+
+    if (qty > sourceStock) {
+      alert(
+        `Insufficient Stock! Available stock is only ${sourceStock}`
+      );
       return;
     }
 
     const newTransfer = {
       id: Date.now(),
       product,
-      from: sourceLocation,
-      to: destinationLocation,
-      quantity,
+      fromWarehouse: sourceWarehouse,
+      fromLocation: sourceLocation,
+      toWarehouse: destinationWarehouse,
+      toLocation: destinationLocation,
+      quantity: qty,
       status: "Ready",
     };
 
-    setTransfers([...transfers, newTransfer]);
+    setTransfers([newTransfer, ...transfers]);
 
     setProduct("");
     setSourceWarehouse("");
@@ -42,85 +56,127 @@ export default function Transfers() {
     setQuantity("");
   };
 
+  const qty = Number(quantity) || 0;
+
+  const afterSource =
+    qty <= sourceStock ? sourceStock - qty : sourceStock;
+
+  const afterDestination =
+    qty <= sourceStock
+      ? destinationStock + qty
+      : destinationStock;
+
   return (
-    <div style={{ padding: "25px" }}>
-      <h1 style={{ marginBottom: "20px" }}>Internal Transfers</h1>
+    <div
+      style={{
+        padding: "30px",
+        background: "#f4f7fc",
+        minHeight: "100vh",
+      }}
+    >
+      <h1 style={{ marginBottom: 25 }}>
+        Internal Transfers
+      </h1>
 
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "2fr 1fr",
           gap: "20px",
-          marginBottom: "30px",
+          marginBottom: "25px",
         }}
       >
-        {/* Transfer Form */}
-
+        {/* FORM CARD */}
         <div
           style={{
             background: "#fff",
-            padding: "20px",
+            padding: "25px",
             borderRadius: "12px",
-            boxShadow: "0px 2px 10px rgba(0,0,0,0.1)",
+            boxShadow:
+              "0 2px 8px rgba(0,0,0,0.1)",
           }}
         >
-          <h2>Create Transfer</h2>
+          <h3>Create Transfer</h3>
 
           <input
-            value={product}
-            onChange={(e) => setProduct(e.target.value)}
             placeholder="Product"
+            value={product}
+            onChange={(e) =>
+              setProduct(e.target.value)
+            }
             style={inputStyle}
           />
 
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "10px",
+            }}
+          >
             <input
-              value={sourceWarehouse}
-              onChange={(e) => setSourceWarehouse(e.target.value)}
               placeholder="Source Warehouse"
+              value={sourceWarehouse}
+              onChange={(e) =>
+                setSourceWarehouse(
+                  e.target.value
+                )
+              }
               style={inputStyle}
             />
 
             <input
-              value={sourceLocation}
-              onChange={(e) => setSourceLocation(e.target.value)}
               placeholder="Source Location"
+              value={sourceLocation}
+              onChange={(e) =>
+                setSourceLocation(
+                  e.target.value
+                )
+              }
               style={inputStyle}
             />
-          </div>
 
-          <div style={{ display: "flex", gap: "10px" }}>
             <input
-              value={destinationWarehouse}
-              onChange={(e) => setDestinationWarehouse(e.target.value)}
               placeholder="Destination Warehouse"
+              value={destinationWarehouse}
+              onChange={(e) =>
+                setDestinationWarehouse(
+                  e.target.value
+                )
+              }
               style={inputStyle}
             />
 
             <input
-              value={destinationLocation}
-              onChange={(e) => setDestinationLocation(e.target.value)}
               placeholder="Destination Location"
+              value={destinationLocation}
+              onChange={(e) =>
+                setDestinationLocation(
+                  e.target.value
+                )
+              }
               style={inputStyle}
             />
           </div>
 
           <input
             type="number"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
             placeholder="Quantity"
+            value={quantity}
+            onChange={(e) =>
+              setQuantity(e.target.value)
+            }
             style={inputStyle}
           />
 
           <button
             onClick={handleTransfer}
             style={{
-              marginTop: "15px",
               background: "#2563eb",
-              color: "white",
+              color: "#fff",
               border: "none",
-              padding: "10px 18px",
+              padding:
+                "12px 22px",
               borderRadius: "8px",
               cursor: "pointer",
             }}
@@ -129,70 +185,150 @@ export default function Transfers() {
           </button>
         </div>
 
-        {/* Stock Validation */}
-
+        {/* VALIDATION CARD */}
         <div
           style={{
             background: "#fff",
             padding: "20px",
             borderRadius: "12px",
-            boxShadow: "0px 2px 10px rgba(0,0,0,0.1)",
+            boxShadow:
+              "0 2px 8px rgba(0,0,0,0.1)",
           }}
         >
-          <h2>Stock Validation</h2>
+          <h3>Stock Validation</h3>
+
+          <h4>Before Transfer</h4>
 
           <p>Main Storage: 100</p>
           <p>Production Floor: 20</p>
+          <p>Total Stock: 120</p>
 
           <hr />
 
-          <h3>Total Stock: 120</h3>
+          <h4>Transfer Quantity</h4>
 
-          <p style={{ color: "green" }}>
-            ✓ Company stock remains unchanged
+          <p>{qty || 0}</p>
+
+          <hr />
+
+          <h4>After Transfer</h4>
+
+          <p>
+            Main Storage: {afterSource}
           </p>
+
+          <p>
+            Production Floor:
+            {afterDestination}
+          </p>
+
+          <p>Total Stock: 120</p>
+
+          {qty > sourceStock ? (
+            <p
+              style={{
+                color: "red",
+                fontWeight: "bold",
+              }}
+            >
+              ❌ Insufficient Stock
+            </p>
+          ) : (
+            <p
+              style={{
+                color: "green",
+                fontWeight: "bold",
+              }}
+            >
+              ✅ Company stock remains
+              unchanged
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Transfer History */}
-
+      {/* HISTORY TABLE */}
       <div
         style={{
           background: "#fff",
           padding: "20px",
           borderRadius: "12px",
-          boxShadow: "0px 2px 10px rgba(0,0,0,0.1)",
+          boxShadow:
+            "0 2px 8px rgba(0,0,0,0.1)",
         }}
       >
-        <h2>Transfer History</h2>
+        <h3>Transfer History</h3>
 
         <table
           style={{
             width: "100%",
             borderCollapse: "collapse",
-            marginTop: "15px",
           }}
         >
           <thead>
-            <tr style={{ background: "#2563eb", color: "white" }}>
-              <th style={thStyle}>ID</th>
-              <th style={thStyle}>Product</th>
-              <th style={thStyle}>From</th>
-              <th style={thStyle}>To</th>
-              <th style={thStyle}>Quantity</th>
-              <th style={thStyle}>Status</th>
+            <tr
+              style={{
+                background:
+                  "#2563eb",
+                color: "white",
+              }}
+            >
+              <th style={thStyle}>
+                Product
+              </th>
+              <th style={thStyle}>
+                From
+              </th>
+              <th style={thStyle}>
+                To
+              </th>
+              <th style={thStyle}>
+                Quantity
+              </th>
+              <th style={thStyle}>
+                Status
+              </th>
             </tr>
           </thead>
 
           <tbody>
-            {transfers.map((transfer) => (
-              <tr key={transfer.id}>
-                <td style={tdStyle}>{transfer.id}</td>
-                <td style={tdStyle}>{transfer.product}</td>
-                <td style={tdStyle}>{transfer.from}</td>
-                <td style={tdStyle}>{transfer.to}</td>
-                <td style={tdStyle}>{transfer.quantity}</td>
-                <td style={tdStyle}>{transfer.status}</td>
+            {transfers.map((t) => (
+              <tr key={t.id}>
+                <td style={tdStyle}>
+                  {t.product}
+                </td>
+
+                <td style={tdStyle}>
+                  {t.fromWarehouse}
+                  <br />
+                  {t.fromLocation}
+                </td>
+
+                <td style={tdStyle}>
+                  {t.toWarehouse}
+                  <br />
+                  {t.toLocation}
+                </td>
+
+                <td style={tdStyle}>
+                  {t.quantity}
+                </td>
+
+                <td style={tdStyle}>
+                  <span
+                    style={{
+                      background:
+                        "#dcfce7",
+                      color: "#166534",
+                      padding:
+                        "5px 10px",
+                      borderRadius:
+                        "20px",
+                    }}
+                  >
+                    Ready
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -204,10 +340,11 @@ export default function Transfers() {
 
 const inputStyle = {
   width: "100%",
-  padding: "10px",
-  marginTop: "10px",
-  border: "1px solid #ddd",
+  padding: "12px",
+  marginBottom: "12px",
   borderRadius: "8px",
+  border: "1px solid #ddd",
+  boxSizing: "border-box",
 };
 
 const thStyle = {
@@ -216,5 +353,5 @@ const thStyle = {
 
 const tdStyle = {
   padding: "12px",
-  borderBottom: "1px solid #ddd",
+  borderBottom: "1px solid #eee",
 };
