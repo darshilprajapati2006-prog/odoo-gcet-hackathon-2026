@@ -1,7 +1,9 @@
 import { useState } from "react";
 
 export default function Transfers() {
-  const [transfers, setTransfers] = useState([]);
+  const [transfers, setTransfers] = useState(() => {
+    return JSON.parse(localStorage.getItem("transfers")) || [];
+  });
 
   const [form, setForm] = useState({
     product: "",
@@ -12,7 +14,6 @@ export default function Transfers() {
     quantity: "",
   });
 
-  // Demo stock
   const MAIN_STORAGE = 100;
   const PRODUCTION_FLOOR = 20;
 
@@ -45,14 +46,56 @@ export default function Transfers() {
       id: Date.now(),
       ...form,
       quantity: qty,
-      status: "Ready",
+      status: "Completed",
       beforeMain: MAIN_STORAGE,
       beforeProduction: PRODUCTION_FLOOR,
       afterMain,
       afterProduction,
+      createdAt: new Date().toLocaleString(),
     };
 
-    setTransfers([newTransfer, ...transfers]);
+    const updatedTransfers = [newTransfer, ...transfers];
+
+    setTransfers(updatedTransfers);
+
+    localStorage.setItem(
+      "transfers",
+      JSON.stringify(updatedTransfers)
+    );
+
+    const history =
+      JSON.parse(localStorage.getItem("moveHistory")) || [];
+
+    const ref = `TRF-${Date.now()}`;
+
+    history.unshift({
+      id: Date.now(),
+      date: new Date().toLocaleString(),
+      product: form.product,
+      type: "TRANSFER_OUT",
+      quantity: -qty,
+      warehouse: form.sourceWarehouse,
+      location: form.sourceLocation,
+      reference: ref,
+      user: "Admin",
+    });
+
+    history.unshift({
+      id: Date.now() + 1,
+      date: new Date().toLocaleString(),
+      product: form.product,
+      type: "TRANSFER_IN",
+      quantity: qty,
+      warehouse: form.destinationWarehouse,
+      location: form.destinationLocation,
+      reference: ref,
+      user: "Admin",
+    });
+
+    localStorage.setItem(
+      "moveHistory",
+      JSON.stringify(history)
+    );
 
     setForm({
       product: "",
@@ -83,7 +126,37 @@ export default function Transfers() {
         Internal Transfers
       </h2>
 
-      {/* TOP SECTION */}
+      {/* SUMMARY */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(220px,1fr))",
+          gap: "15px",
+          marginBottom: "20px",
+        }}
+      >
+        <div style={summaryCard}>
+          <h4>Total Transfers</h4>
+          <h2>{transfers.length}</h2>
+        </div>
+
+        <div style={summaryCard}>
+          <h4>Main Storage</h4>
+          <h2>{MAIN_STORAGE}</h2>
+        </div>
+
+        <div style={summaryCard}>
+          <h4>Production Floor</h4>
+          <h2>{PRODUCTION_FLOOR}</h2>
+        </div>
+
+        <div style={summaryCard}>
+          <h4>Total Stock</h4>
+          <h2>{MAIN_STORAGE + PRODUCTION_FLOOR}</h2>
+        </div>
+      </div>
+
       <div
         style={{
           display: "grid",
@@ -92,15 +165,7 @@ export default function Transfers() {
           marginBottom: "25px",
         }}
       >
-        {/* FORM CARD */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "16px",
-            padding: "25px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-          }}
-        >
+        <div style={card}>
           <h3>Create Transfer</h3>
 
           <input
@@ -188,122 +253,88 @@ export default function Transfers() {
 
           <button
             onClick={createTransfer}
-            style={{
-              background: "#2563eb",
-              color: "#fff",
-              border: "none",
-              padding: "12px 24px",
-              borderRadius: "10px",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
+            style={buttonStyle}
           >
             Create Transfer
           </button>
         </div>
 
-        {/* VALIDATION CARD */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: "16px",
-            padding: "20px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-          }}
-        >
+        <div style={card}>
           <h3>Stock Validation</h3>
 
           {latestTransfer ? (
             <>
-              <h4>Before Transfer</h4>
-
-              <p>Main Storage: {latestTransfer.beforeMain}</p>
               <p>
-                Production Floor:{" "}
+                Before Main Storage:
+                {latestTransfer.beforeMain}
+              </p>
+
+              <p>
+                Before Production:
                 {latestTransfer.beforeProduction}
               </p>
 
               <hr />
 
-              <h4>Transfer Qty</h4>
-
-              <p>{latestTransfer.quantity}</p>
+              <p>
+                Transfer Qty:
+                {latestTransfer.quantity}
+              </p>
 
               <hr />
 
-              <h4>After Transfer</h4>
-
-              <p>Main Storage: {latestTransfer.afterMain}</p>
+              <p>
+                After Main Storage:
+                {latestTransfer.afterMain}
+              </p>
 
               <p>
-                Production Floor:{" "}
+                After Production:
                 {latestTransfer.afterProduction}
               </p>
 
               <p>
-                Total Stock:{" "}
+                Total Stock:
                 {latestTransfer.afterMain +
                   latestTransfer.afterProduction}
               </p>
 
               <div
                 style={{
-                  marginTop: "15px",
                   color: "green",
                   fontWeight: "bold",
                 }}
               >
-                ✅ Company stock remains unchanged
+                ✅ Company stock unchanged
               </div>
             </>
           ) : (
-            <>
-              <p>Main Storage: {MAIN_STORAGE}</p>
-              <p>Production Floor: {PRODUCTION_FLOOR}</p>
-              <p>Total Stock: {MAIN_STORAGE + PRODUCTION_FLOOR}</p>
-
-              <div
-                style={{
-                  marginTop: "15px",
-                  color: "#666",
-                }}
-              >
-                Create a transfer to see validation.
-              </div>
-            </>
+            <p>Create a transfer to see validation</p>
           )}
         </div>
       </div>
 
-      {/* HISTORY */}
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: "16px",
-          padding: "25px",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-        }}
-      >
+      <div style={card}>
         <h3>Transfer History</h3>
 
         <table
           style={{
             width: "100%",
             borderCollapse: "collapse",
-            marginTop: "20px",
           }}
         >
           <thead>
             <tr
               style={{
                 background: "#2563eb",
-                color: "#fff",
+                color: "white",
               }}
             >
+              <th style={th}>Date</th>
               <th style={th}>Product</th>
               <th style={th}>From</th>
               <th style={th}>To</th>
-              <th style={th}>Quantity</th>
+              <th style={th}>Qty</th>
               <th style={th}>Status</th>
             </tr>
           </thead>
@@ -311,6 +342,8 @@ export default function Transfers() {
           <tbody>
             {transfers.map((transfer) => (
               <tr key={transfer.id}>
+                <td style={td}>{transfer.createdAt}</td>
+
                 <td style={td}>{transfer.product}</td>
 
                 <td style={td}>
@@ -336,7 +369,7 @@ export default function Transfers() {
                       borderRadius: "20px",
                     }}
                   >
-                    Ready
+                    Completed
                   </span>
                 </td>
               </tr>
@@ -345,14 +378,27 @@ export default function Transfers() {
         </table>
 
         {transfers.length === 0 && (
-          <p style={{ marginTop: "20px", color: "#666" }}>
-            No transfers yet.
-          </p>
+          <p>No transfers yet.</p>
         )}
       </div>
     </div>
   );
 }
+
+const card = {
+  background: "#fff",
+  borderRadius: "16px",
+  padding: "25px",
+  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+};
+
+const summaryCard = {
+  background: "#fff",
+  borderRadius: "16px",
+  padding: "20px",
+  textAlign: "center",
+  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+};
 
 const rowStyle = {
   display: "grid",
@@ -367,6 +413,16 @@ const inputStyle = {
   borderRadius: "10px",
   border: "1px solid #ddd",
   boxSizing: "border-box",
+};
+
+const buttonStyle = {
+  background: "#2563eb",
+  color: "#fff",
+  border: "none",
+  padding: "12px 24px",
+  borderRadius: "10px",
+  cursor: "pointer",
+  fontWeight: "bold",
 };
 
 const th = {
