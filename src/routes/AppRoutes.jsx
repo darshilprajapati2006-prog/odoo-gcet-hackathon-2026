@@ -1,10 +1,21 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+import AppLayout from "../components/layout/AppLayout";
+
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
 import ForgotPassword from "../pages/ForgotPassword";
+
 import Dashboard from "../pages/Dashboard";
+import Products from "../pages/Products";
+import Receipts from "../pages/Receipts";
+import Deliveries from "../pages/Deliveries";
+import Transfers from "../pages/Transfers";
+import Adjustments from "../pages/Adjustments";
+import MoveHistory from "../pages/MoveHistory";
+import Warehouses from "../pages/Warehouses";
+import Profile from "../pages/Profile";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -42,9 +53,19 @@ function PublicRoute({ children }) {
   return children;
 }
 
+function ProtectedLayout({ children }) {
+  return (
+    <ProtectedRoute>
+      <AppLayout>{children}</AppLayout>
+    </ProtectedRoute>
+  );
+}
+
 function AppRoutes() {
   return (
     <Routes>
+      {/* ================= PUBLIC ROUTES ================= */}
+
       <Route
         path="/login"
         element={
@@ -72,14 +93,90 @@ function AppRoutes() {
         }
       />
 
+      {/* ================= PROTECTED ROUTES ================= */}
+
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedLayout>
             <Dashboard />
-          </ProtectedRoute>
+          </ProtectedLayout>
         }
       />
+
+      <Route
+        path="/products"
+        element={
+          <ProtectedLayout>
+            <Products />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/receipts"
+        element={
+          <ProtectedLayout>
+            <Receipts />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/deliveries"
+        element={
+          <ProtectedLayout>
+            <Deliveries />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/transfers"
+        element={
+          <ProtectedLayout>
+            <Transfers />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/adjustments"
+        element={
+          <ProtectedLayout>
+            <Adjustments />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/move-history"
+        element={
+          <ProtectedLayout>
+            <MoveHistory />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/warehouses"
+        element={
+          <ProtectedLayout>
+            <Warehouses />
+          </ProtectedLayout>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedLayout>
+            <Profile />
+          </ProtectedLayout>
+        }
+      />
+
+      {/* ================= DEFAULT ================= */}
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
