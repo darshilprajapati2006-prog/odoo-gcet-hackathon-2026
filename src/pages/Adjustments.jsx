@@ -1,372 +1,395 @@
 import { useState } from "react";
 
 export default function Adjustments() {
-  const systemQty = 100;
+  const [adjustments, setAdjustments] = useState([]);
+  const [showModal, setShowModal] = useState(false);
 
   const [form, setForm] = useState({
     product: "",
     warehouse: "",
-    location: "",
+    systemQty: "",
     countedQty: "",
     reason: "",
   });
 
-  const [adjustments, setAdjustments] = useState([]);
-  const [lastAdjustment, setLastAdjustment] = useState(null);
-
-  const countedQty = Number(form.countedQty) || 0;
-  const difference = countedQty - systemQty;
-
-  const adjustmentType =
-    difference > 0
-      ? "Stock Gain"
-      : difference < 0
-      ? "Stock Loss"
-      : "No Change";
-
-  const handleCreate = () => {
+  const createAdjustment = () => {
     if (
       !form.product ||
       !form.warehouse ||
-      !form.location ||
-      !form.countedQty
+      !form.systemQty ||
+      !form.countedQty ||
+      !form.reason
     ) {
       alert("Please fill all fields");
       return;
     }
 
-    const confirmed = window.confirm(
-      `Adjust stock from ${systemQty} to ${countedQty}?`
-    );
-
-    if (!confirmed) return;
+    const systemQty = Number(form.systemQty);
+    const countedQty = Number(form.countedQty);
+    const difference = countedQty - systemQty;
 
     const newAdjustment = {
       id: Date.now(),
-      time: new Date().toLocaleTimeString(),
+      reference: `ADJ-${Date.now()}`,
       ...form,
       systemQty,
       countedQty,
       difference,
-      adjustmentType,
+      date: new Date().toLocaleDateString(),
       status: "Validated",
     };
 
     setAdjustments([newAdjustment, ...adjustments]);
-    setLastAdjustment(newAdjustment);
 
     setForm({
       product: "",
       warehouse: "",
-      location: "",
+      systemQty: "",
       countedQty: "",
       reason: "",
     });
+
+    setShowModal(false);
   };
 
+  const totalDifference = adjustments.reduce(
+    (sum, a) => sum + a.difference,
+    0
+  );
+
   return (
-    <div style={{ padding: "30px" }}>
-      <h2 style={{ marginBottom: "20px" }}>
-        📦 Inventory Adjustments
-      </h2>
+    <div
+      style={{
+        padding: "30px",
+        background: "#f4f7fc",
+        minHeight: "100vh",
+      }}
+    >
+      {/* HEADER */}
 
-      {/* SUMMARY CARDS */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3,1fr)",
-          gap: "15px",
-          marginBottom: "20px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "25px",
         }}
       >
-        <div style={cardStyle}>
-          <h4>System Qty</h4>
-          <h2>{systemQty}</h2>
+        <div>
+          <h1>Adjustments</h1>
+          <p style={{ color: "#64748b" }}>
+            Manage inventory corrections and stock counts.
+          </p>
         </div>
 
-        <div style={cardStyle}>
-          <h4>Counted Qty</h4>
-          <h2>{countedQty}</h2>
-        </div>
-
-        <div style={cardStyle}>
-          <h4>Difference</h4>
-          <h2
-            style={{
-              color:
-                difference > 0
-                  ? "green"
-                  : difference < 0
-                  ? "red"
-                  : "#444",
-            }}
-          >
-            {difference > 0 ? `+${difference}` : difference}
-          </h2>
-        </div>
+        <button
+          style={buttonStyle}
+          onClick={() => setShowModal(true)}
+        >
+          + New Adjustment
+        </button>
       </div>
 
-      {/* FORM + VALIDATION */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "2fr 1fr",
-          gap: "20px",
-        }}
-      >
-        {/* FORM */}
-        <div style={boxStyle}>
-          <h3>Create Adjustment</h3>
+      {/* STATS */}
 
-          <input
-            style={inputStyle}
-            placeholder="Product"
-            value={form.product}
-            onChange={(e) =>
-              setForm({ ...form, product: e.target.value })
-            }
-          />
+      <div style={statsGrid}>
+        <Card
+          title="Total Adjustments"
+          value={adjustments.length}
+        />
 
-          <div style={{ display: "flex", gap: "10px" }}>
-            <input
-              style={inputStyle}
-              placeholder="Warehouse"
-              value={form.warehouse}
-              onChange={(e) =>
-                setForm({ ...form, warehouse: e.target.value })
-              }
-            />
+        <Card
+          title="Validated"
+          value={
+            adjustments.filter(
+              (a) => a.status === "Validated"
+            ).length
+          }
+          color="#16a34a"
+        />
 
-            <input
-              style={inputStyle}
-              placeholder="Location"
-              value={form.location}
-              onChange={(e) =>
-                setForm({ ...form, location: e.target.value })
-              }
-            />
-          </div>
+        <Card
+          title="Positive Variance"
+          value={
+            adjustments.filter(
+              (a) => a.difference > 0
+            ).length
+          }
+          color="#2563eb"
+        />
 
-          <div
-            style={{
-              background: "#f3f4f6",
-              padding: "15px",
-              borderRadius: "8px",
-              marginBottom: "15px",
-              fontWeight: "bold",
-            }}
-          >
-            System Quantity: {systemQty}
-          </div>
-
-          <input
-            type="number"
-            style={inputStyle}
-            placeholder="Counted Quantity"
-            value={form.countedQty}
-            onChange={(e) =>
-              setForm({ ...form, countedQty: e.target.value })
-            }
-          />
-
-          <input
-            style={inputStyle}
-            placeholder="Reason"
-            value={form.reason}
-            onChange={(e) =>
-              setForm({ ...form, reason: e.target.value })
-            }
-          />
-
-          <button style={btnStyle} onClick={handleCreate}>
-            Validate Adjustment
-          </button>
-        </div>
-
-        {/* VALIDATION CARD */}
-        <div style={boxStyle}>
-          <h3>Adjustment Validation</h3>
-
-          <p><b>Before</b></p>
-          <p>System Quantity: {systemQty}</p>
-
-          <hr />
-
-          <p><b>Counted Quantity</b></p>
-          <p>{countedQty}</p>
-
-          <hr />
-
-          <p><b>Difference</b></p>
-
-          <p
-            style={{
-              color:
-                difference > 0
-                  ? "green"
-                  : difference < 0
-                  ? "red"
-                  : "#444",
-              fontWeight: "bold",
-              fontSize: "18px",
-            }}
-          >
-            {difference > 0 ? `+${difference}` : difference}
-          </p>
-
-          <hr />
-
-          <p><b>Adjustment Type</b></p>
-          <p>{adjustmentType}</p>
-
-          <hr />
-
-          <p><b>Final Stock</b></p>
-          <p>
-            {systemQty} → {countedQty}
-          </p>
-
-          <hr />
-
-          <p
-            style={{
-              color: "#2563eb",
-              fontWeight: "bold",
-            }}
-          >
-            Ledger Entry Ready ✓
-          </p>
-        </div>
+        <Card
+          title="Net Difference"
+          value={totalDifference}
+          color={
+            totalDifference >= 0
+              ? "#16a34a"
+              : "#dc2626"
+          }
+        />
       </div>
 
-      {/* HISTORY */}
+      {/* SEARCH */}
+
+      <div style={cardStyle}>
+        <input
+          placeholder="Search adjustment..."
+          style={inputStyle}
+        />
+      </div>
+
+      {/* TABLE */}
+
       <div
         style={{
-          marginTop: "30px",
-          background: "white",
-          padding: "20px",
-          borderRadius: "12px",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+          ...cardStyle,
+          marginTop: "20px",
         }}
       >
-        <h3>Adjustment History</h3>
-
         <table
           style={{
             width: "100%",
             borderCollapse: "collapse",
-            marginTop: "15px",
           }}
         >
           <thead>
-            <tr style={{ background: "#2563eb", color: "white" }}>
-              <th style={thStyle}>Time</th>
-              <th style={thStyle}>Product</th>
-              <th style={thStyle}>Warehouse</th>
-              <th style={thStyle}>System</th>
-              <th style={thStyle}>Counted</th>
-              <th style={thStyle}>Difference</th>
-              <th style={thStyle}>Type</th>
-              <th style={thStyle}>Status</th>
+            <tr
+              style={{
+                background: "#f1f5f9",
+              }}
+            >
+              <th style={th}>Reference</th>
+              <th style={th}>Product</th>
+              <th style={th}>Warehouse</th>
+              <th style={th}>System Qty</th>
+              <th style={th}>Counted Qty</th>
+              <th style={th}>Difference</th>
+              <th style={th}>Date</th>
+              <th style={th}>Status</th>
             </tr>
           </thead>
 
           <tbody>
-            {adjustments.length === 0 ? (
-              <tr>
+            {adjustments.map((adj) => (
+              <tr key={adj.id}>
+                <td style={td}>
+                  {adj.reference}
+                </td>
+
+                <td style={td}>
+                  {adj.product}
+                </td>
+
+                <td style={td}>
+                  {adj.warehouse}
+                </td>
+
+                <td style={td}>
+                  {adj.systemQty}
+                </td>
+
+                <td style={td}>
+                  {adj.countedQty}
+                </td>
+
                 <td
-                  colSpan="8"
                   style={{
-                    textAlign: "center",
-                    padding: "20px",
+                    ...td,
+                    color:
+                      adj.difference >= 0
+                        ? "green"
+                        : "red",
+                    fontWeight: "bold",
                   }}
                 >
-                  No adjustments yet
+                  {adj.difference > 0
+                    ? `+${adj.difference}`
+                    : adj.difference}
                 </td>
-              </tr>
-            ) : (
-              adjustments.map((item) => (
-                <tr key={item.id}>
-                  <td style={tdStyle}>{item.time}</td>
-                  <td style={tdStyle}>{item.product}</td>
-                  <td style={tdStyle}>{item.warehouse}</td>
-                  <td style={tdStyle}>{item.systemQty}</td>
-                  <td style={tdStyle}>{item.countedQty}</td>
 
-                  <td
+                <td style={td}>
+                  {adj.date}
+                </td>
+
+                <td style={td}>
+                  <span
                     style={{
-                      ...tdStyle,
-                      color:
-                        item.difference > 0
-                          ? "green"
-                          : item.difference < 0
-                          ? "red"
-                          : "#444",
-                      fontWeight: "bold",
+                      background: "#dcfce7",
+                      color: "#166534",
+                      padding: "6px 12px",
+                      borderRadius: "20px",
                     }}
                   >
-                    {item.difference > 0
-                      ? `+${item.difference}`
-                      : item.difference}
-                  </td>
-
-                  <td style={tdStyle}>
-                    {item.adjustmentType}
-                  </td>
-
-                  <td style={tdStyle}>
-                    <span
-                      style={{
-                        background: "#dcfce7",
-                        color: "#166534",
-                        padding: "6px 12px",
-                        borderRadius: "20px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Validated
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
+                    {adj.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
+
+        {adjustments.length === 0 && (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "40px",
+              color: "#64748b",
+            }}
+          >
+            No adjustments found.
+          </div>
+        )}
       </div>
+
+      {/* MODAL */}
+
+      {showModal && (
+        <div style={overlay}>
+          <div style={modal}>
+            <h2>Create Adjustment</h2>
+
+            <input
+              placeholder="Product"
+              value={form.product}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  product: e.target.value,
+                })
+              }
+              style={inputStyle}
+            />
+
+            <input
+              placeholder="Warehouse"
+              value={form.warehouse}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  warehouse:
+                    e.target.value,
+                })
+              }
+              style={inputStyle}
+            />
+
+            <input
+              type="number"
+              placeholder="System Quantity"
+              value={form.systemQty}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  systemQty:
+                    e.target.value,
+                })
+              }
+              style={inputStyle}
+            />
+
+            <input
+              type="number"
+              placeholder="Counted Quantity"
+              value={form.countedQty}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  countedQty:
+                    e.target.value,
+                })
+              }
+              style={inputStyle}
+            />
+
+            <textarea
+              placeholder="Reason"
+              value={form.reason}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  reason:
+                    e.target.value,
+                })
+              }
+              style={{
+                ...inputStyle,
+                minHeight: "90px",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+              }}
+            >
+              <button
+                onClick={createAdjustment}
+                style={buttonStyle}
+              >
+                Save
+              </button>
+
+              <button
+                onClick={() =>
+                  setShowModal(false)
+                }
+                style={{
+                  ...buttonStyle,
+                  background: "#64748b",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/* STYLES */
+function Card({
+  title,
+  value,
+  color = "#111827",
+}) {
+  return (
+    <div style={cardStyle}>
+      <p>{title}</p>
+      <h1 style={{ color }}>{value}</h1>
+    </div>
+  );
+}
 
-const cardStyle = {
-  background: "white",
-  padding: "20px",
-  borderRadius: "12px",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-  textAlign: "center",
+const statsGrid = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit,minmax(220px,1fr))",
+  gap: "20px",
+  marginBottom: "20px",
 };
 
-const boxStyle = {
-  background: "white",
-  padding: "25px",
-  borderRadius: "12px",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+const cardStyle = {
+  background: "#fff",
+  padding: "20px",
+  borderRadius: "14px",
+  boxShadow:
+    "0 2px 10px rgba(0,0,0,0.08)",
 };
 
 const inputStyle = {
   width: "100%",
   padding: "12px",
-  marginBottom: "15px",
-  borderRadius: "8px",
+  marginBottom: "12px",
   border: "1px solid #ddd",
-  fontSize: "15px",
+  borderRadius: "8px",
   boxSizing: "border-box",
 };
 
-const btnStyle = {
+const buttonStyle = {
   background: "#2563eb",
-  color: "white",
+  color: "#fff",
   border: "none",
   padding: "12px 20px",
   borderRadius: "8px",
@@ -374,11 +397,30 @@ const btnStyle = {
   fontWeight: "bold",
 };
 
-const thStyle = {
-  padding: "12px",
+const th = {
+  padding: "14px",
+  textAlign: "left",
 };
 
-const tdStyle = {
-  padding: "12px",
-  borderBottom: "1px solid #eee",
+const td = {
+  padding: "14px",
+  borderTop: "1px solid #eee",
+};
+
+const overlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.4)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 999,
+};
+
+const modal = {
+  background: "#fff",
+  padding: "25px",
+  borderRadius: "12px",
+  width: "550px",
+  maxWidth: "90%",
 };

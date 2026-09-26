@@ -1,113 +1,52 @@
 import { useState } from "react";
 
 export default function Transfers() {
-  const [transfers, setTransfers] = useState(() => {
-    return JSON.parse(localStorage.getItem("transfers")) || [];
-  });
+  const [transfers, setTransfers] = useState([]);
+  const [showModal, setShowModal] = useState(false);
 
   const [form, setForm] = useState({
     product: "",
-    sourceWarehouse: "",
-    sourceLocation: "",
-    destinationWarehouse: "",
-    destinationLocation: "",
+    fromWarehouse: "",
+    toWarehouse: "",
     quantity: "",
   });
-
-  const MAIN_STORAGE = 100;
-  const PRODUCTION_FLOOR = 20;
-
-  const qty = Number(form.quantity) || 0;
-
-  const afterMain = MAIN_STORAGE - qty;
-  const afterProduction = PRODUCTION_FLOOR + qty;
 
   const createTransfer = () => {
     if (
       !form.product ||
-      !form.sourceWarehouse ||
-      !form.sourceLocation ||
-      !form.destinationWarehouse ||
-      !form.destinationLocation ||
+      !form.fromWarehouse ||
+      !form.toWarehouse ||
       !form.quantity
     ) {
-      alert("Please fill all fields");
-      return;
-    }
-
-    if (qty > MAIN_STORAGE) {
-      alert(
-        `Insufficient stock!\nAvailable: ${MAIN_STORAGE}\nRequested: ${qty}`
-      );
+      alert("Fill all fields");
       return;
     }
 
     const newTransfer = {
       id: Date.now(),
+      reference: `TRF-${Date.now()}`,
       ...form,
-      quantity: qty,
-      status: "Completed",
-      beforeMain: MAIN_STORAGE,
-      beforeProduction: PRODUCTION_FLOOR,
-      afterMain,
-      afterProduction,
-      createdAt: new Date().toLocaleString(),
+      quantity: Number(form.quantity),
+      date: new Date().toLocaleDateString(),
+      status: "Ready",
     };
 
-    const updatedTransfers = [newTransfer, ...transfers];
-
-    setTransfers(updatedTransfers);
-
-    localStorage.setItem(
-      "transfers",
-      JSON.stringify(updatedTransfers)
-    );
-
-    const history =
-      JSON.parse(localStorage.getItem("moveHistory")) || [];
-
-    const ref = `TRF-${Date.now()}`;
-
-    history.unshift({
-      id: Date.now(),
-      date: new Date().toLocaleString(),
-      product: form.product,
-      type: "TRANSFER_OUT",
-      quantity: -qty,
-      warehouse: form.sourceWarehouse,
-      location: form.sourceLocation,
-      reference: ref,
-      user: "Admin",
-    });
-
-    history.unshift({
-      id: Date.now() + 1,
-      date: new Date().toLocaleString(),
-      product: form.product,
-      type: "TRANSFER_IN",
-      quantity: qty,
-      warehouse: form.destinationWarehouse,
-      location: form.destinationLocation,
-      reference: ref,
-      user: "Admin",
-    });
-
-    localStorage.setItem(
-      "moveHistory",
-      JSON.stringify(history)
-    );
+    setTransfers([newTransfer, ...transfers]);
 
     setForm({
       product: "",
-      sourceWarehouse: "",
-      sourceLocation: "",
-      destinationWarehouse: "",
-      destinationLocation: "",
+      fromWarehouse: "",
+      toWarehouse: "",
       quantity: "",
     });
+
+    setShowModal(false);
   };
 
-  const latestTransfer = transfers[0];
+  const totalQty = transfers.reduce(
+    (sum, t) => sum + t.quantity,
+    0
+  );
 
   return (
     <div
@@ -117,206 +56,82 @@ export default function Transfers() {
         minHeight: "100vh",
       }}
     >
-      <h2
-        style={{
-          marginBottom: "20px",
-          color: "#1f2937",
-        }}
-      >
-        Internal Transfers
-      </h2>
-
-      {/* SUMMARY */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit,minmax(220px,1fr))",
-          gap: "15px",
-          marginBottom: "20px",
-        }}
-      >
-        <div style={summaryCard}>
-          <h4>Total Transfers</h4>
-          <h2>{transfers.length}</h2>
-        </div>
-
-        <div style={summaryCard}>
-          <h4>Main Storage</h4>
-          <h2>{MAIN_STORAGE}</h2>
-        </div>
-
-        <div style={summaryCard}>
-          <h4>Production Floor</h4>
-          <h2>{PRODUCTION_FLOOR}</h2>
-        </div>
-
-        <div style={summaryCard}>
-          <h4>Total Stock</h4>
-          <h2>{MAIN_STORAGE + PRODUCTION_FLOOR}</h2>
-        </div>
-      </div>
+      {/* HEADER */}
 
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "2fr 1fr",
-          gap: "20px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: "25px",
         }}
       >
-        <div style={card}>
-          <h3>Create Transfer</h3>
-
-          <input
-            placeholder="Product"
-            value={form.product}
-            onChange={(e) =>
-              setForm({ ...form, product: e.target.value })
-            }
-            style={inputStyle}
-          />
-
-          <div style={rowStyle}>
-            <input
-              placeholder="Source Warehouse"
-              value={form.sourceWarehouse}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  sourceWarehouse: e.target.value,
-                })
-              }
-              style={inputStyle}
-            />
-
-            <input
-              placeholder="Source Location"
-              value={form.sourceLocation}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  sourceLocation: e.target.value,
-                })
-              }
-              style={inputStyle}
-            />
-          </div>
-
-          <div style={rowStyle}>
-            <input
-              placeholder="Destination Warehouse"
-              value={form.destinationWarehouse}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  destinationWarehouse: e.target.value,
-                })
-              }
-              style={inputStyle}
-            />
-
-            <input
-              placeholder="Destination Location"
-              value={form.destinationLocation}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  destinationLocation: e.target.value,
-                })
-              }
-              style={inputStyle}
-            />
-          </div>
-
-          <input
-            type="number"
-            placeholder={`Quantity (Max ${MAIN_STORAGE})`}
-            value={form.quantity}
-            onChange={(e) =>
-              setForm({ ...form, quantity: e.target.value })
-            }
-            style={inputStyle}
-          />
-
-          {qty > MAIN_STORAGE && (
-            <div
-              style={{
-                color: "red",
-                fontWeight: "bold",
-                marginBottom: "15px",
-              }}
-            >
-              ❌ Insufficient Stock
-            </div>
-          )}
-
-          <button
-            onClick={createTransfer}
-            style={buttonStyle}
-          >
-            Create Transfer
-          </button>
+        <div>
+          <h1>Transfers</h1>
+          <p style={{ color: "#64748b" }}>
+            Manage internal inventory transfers.
+          </p>
         </div>
 
-        <div style={card}>
-          <h3>Stock Validation</h3>
-
-          {latestTransfer ? (
-            <>
-              <p>
-                Before Main Storage:
-                {latestTransfer.beforeMain}
-              </p>
-
-              <p>
-                Before Production:
-                {latestTransfer.beforeProduction}
-              </p>
-
-              <hr />
-
-              <p>
-                Transfer Qty:
-                {latestTransfer.quantity}
-              </p>
-
-              <hr />
-
-              <p>
-                After Main Storage:
-                {latestTransfer.afterMain}
-              </p>
-
-              <p>
-                After Production:
-                {latestTransfer.afterProduction}
-              </p>
-
-              <p>
-                Total Stock:
-                {latestTransfer.afterMain +
-                  latestTransfer.afterProduction}
-              </p>
-
-              <div
-                style={{
-                  color: "green",
-                  fontWeight: "bold",
-                }}
-              >
-                ✅ Company stock unchanged
-              </div>
-            </>
-          ) : (
-            <p>Create a transfer to see validation</p>
-          )}
-        </div>
+        <button
+          onClick={() => setShowModal(true)}
+          style={buttonStyle}
+        >
+          + New Transfer
+        </button>
       </div>
 
-      <div style={card}>
-        <h3>Transfer History</h3>
+      {/* STATS */}
 
+      <div style={statsGrid}>
+        <Card
+          title="Total Transfers"
+          value={transfers.length}
+        />
+
+        <Card
+          title="Ready"
+          value={
+            transfers.filter(
+              (t) => t.status === "Ready"
+            ).length
+          }
+          color="#2563eb"
+        />
+
+        <Card
+          title="Completed"
+          value={
+            transfers.filter(
+              (t) => t.status === "Completed"
+            ).length
+          }
+          color="#16a34a"
+        />
+
+        <Card
+          title="Total Quantity"
+          value={totalQty}
+        />
+      </div>
+
+      {/* FILTER */}
+
+      <div style={cardStyle}>
+        <input
+          placeholder="Search transfer..."
+          style={inputStyle}
+        />
+      </div>
+
+      {/* TABLE */}
+
+      <div
+        style={{
+          ...cardStyle,
+          marginTop: "20px",
+        }}
+      >
         <table
           style={{
             width: "100%",
@@ -326,50 +141,50 @@ export default function Transfers() {
           <thead>
             <tr
               style={{
-                background: "#2563eb",
-                color: "white",
+                background: "#f1f5f9",
               }}
             >
-              <th style={th}>Date</th>
+              <th style={th}>Transfer</th>
               <th style={th}>Product</th>
               <th style={th}>From</th>
               <th style={th}>To</th>
               <th style={th}>Qty</th>
+              <th style={th}>Date</th>
               <th style={th}>Status</th>
             </tr>
           </thead>
 
           <tbody>
-            {transfers.map((transfer) => (
-              <tr key={transfer.id}>
-                <td style={td}>{transfer.createdAt}</td>
+            {transfers.map((t) => (
+              <tr key={t.id}>
+                <td style={td}>{t.reference}</td>
 
-                <td style={td}>{transfer.product}</td>
+                <td style={td}>{t.product}</td>
 
                 <td style={td}>
-                  {transfer.sourceWarehouse}
-                  <br />
-                  {transfer.sourceLocation}
+                  {t.fromWarehouse}
                 </td>
 
                 <td style={td}>
-                  {transfer.destinationWarehouse}
-                  <br />
-                  {transfer.destinationLocation}
+                  {t.toWarehouse}
                 </td>
 
-                <td style={td}>{transfer.quantity}</td>
+                <td style={td}>{t.quantity}</td>
+
+                <td style={td}>{t.date}</td>
 
                 <td style={td}>
                   <span
                     style={{
-                      background: "#dcfce7",
-                      color: "#166534",
-                      padding: "6px 12px",
-                      borderRadius: "20px",
+                      background: "#dbeafe",
+                      color: "#1d4ed8",
+                      padding:
+                        "6px 12px",
+                      borderRadius:
+                        "20px",
                     }}
                   >
-                    Completed
+                    {t.status}
                   </span>
                 </td>
               </tr>
@@ -378,58 +193,178 @@ export default function Transfers() {
         </table>
 
         {transfers.length === 0 && (
-          <p>No transfers yet.</p>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "40px",
+              color: "#64748b",
+            }}
+          >
+            No transfers found.
+          </div>
         )}
       </div>
+
+      {/* MODAL */}
+
+      {showModal && (
+        <div style={overlay}>
+          <div style={modal}>
+            <h2>Create Transfer</h2>
+
+            <input
+              placeholder="Product"
+              value={form.product}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  product: e.target.value,
+                })
+              }
+              style={inputStyle}
+            />
+
+            <input
+              placeholder="From Warehouse"
+              value={form.fromWarehouse}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  fromWarehouse:
+                    e.target.value,
+                })
+              }
+              style={inputStyle}
+            />
+
+            <input
+              placeholder="To Warehouse"
+              value={form.toWarehouse}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  toWarehouse:
+                    e.target.value,
+                })
+              }
+              style={inputStyle}
+            />
+
+            <input
+              type="number"
+              placeholder="Quantity"
+              value={form.quantity}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  quantity:
+                    e.target.value,
+                })
+              }
+              style={inputStyle}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+              }}
+            >
+              <button
+                onClick={createTransfer}
+                style={buttonStyle}
+              >
+                Save
+              </button>
+
+              <button
+                onClick={() =>
+                  setShowModal(false)
+                }
+                style={{
+                  ...buttonStyle,
+                  background: "#64748b",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-const card = {
-  background: "#fff",
-  borderRadius: "16px",
-  padding: "25px",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-};
+function Card({
+  title,
+  value,
+  color = "#111827",
+}) {
+  return (
+    <div style={cardStyle}>
+      <p>{title}</p>
+      <h1 style={{ color }}>{value}</h1>
+    </div>
+  );
+}
 
-const summaryCard = {
-  background: "#fff",
-  borderRadius: "16px",
-  padding: "20px",
-  textAlign: "center",
-  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
-};
-
-const rowStyle = {
+const statsGrid = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "12px",
+  gridTemplateColumns:
+    "repeat(auto-fit,minmax(220px,1fr))",
+  gap: "20px",
+  marginBottom: "20px",
+};
+
+const cardStyle = {
+  background: "#fff",
+  padding: "20px",
+  borderRadius: "14px",
+  boxShadow:
+    "0 2px 10px rgba(0,0,0,0.08)",
 };
 
 const inputStyle = {
   width: "100%",
   padding: "12px",
-  marginBottom: "14px",
-  borderRadius: "10px",
+  marginBottom: "12px",
   border: "1px solid #ddd",
-  boxSizing: "border-box",
+  borderRadius: "8px",
 };
 
 const buttonStyle = {
   background: "#2563eb",
   color: "#fff",
   border: "none",
-  padding: "12px 24px",
-  borderRadius: "10px",
+  padding: "12px 20px",
+  borderRadius: "8px",
   cursor: "pointer",
-  fontWeight: "bold",
 };
 
 const th = {
   padding: "14px",
+  textAlign: "left",
 };
 
 const td = {
   padding: "14px",
-  borderBottom: "1px solid #eee",
+  borderTop: "1px solid #eee",
+};
+
+const overlay = {
+  position: "fixed",
+  inset: 0,
+  background:
+    "rgba(0,0,0,0.4)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+};
+
+const modal = {
+  background: "#fff",
+  padding: "25px",
+  borderRadius: "12px",
+  width: "500px",
 };
